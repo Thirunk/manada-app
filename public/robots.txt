@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# Sitemap is added once the owner confirms the canonical production domain.

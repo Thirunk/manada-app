@@ -1,112 +1,102 @@
-"use client";
-
 import { useState } from "react";
-import { Dialog, DialogPanel } from "@headlessui/react";
+import { NavLink } from "react-router-dom";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
-import logo from "../assets/logo.jpg";
+import { primaryNavigation } from "../config/navigation";
+import { primaryPhone } from "../config/site";
 
-const navigation = [
-  { name: "Products", href: "#" },
-  { name: "About US", href: "#" },
-  { name: "Contact US", href: "#" },
-  // { name: "Company", href: "#" },
-];
+const linkClass = ({ isActive }) =>
+  [
+    "rounded-md text-sm font-semibold leading-6 text-stone-900 underline-offset-4 hover:underline focus-visible:ring-4 focus-visible:ring-yellow-400 focus-visible:outline-none",
+    isActive ? "underline decoration-2" : "",
+  ].join(" ");
 
-export default function Menu() {
+const mobileLinkClass = ({ isActive }) =>
+  [
+    "-mx-3 block rounded-lg px-3 py-3 text-base font-semibold leading-7 text-stone-900 hover:bg-stone-100 focus-visible:ring-4 focus-visible:ring-yellow-400 focus-visible:outline-none",
+    isActive ? "bg-yellow-100" : "",
+  ].join(" ");
+
+/**
+ * Primary navigation. Desktop links and the mobile dialog both read the same
+ * configuration in config/navigation.js. Headless UI's Dialog provides the
+ * focus trap, Escape handling and focus restoration.
+ */
+function Menu() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header>
-      <nav
-        aria-label="Global"
-        className="mx-auto flex max-w-7xl items-center justify-between lg:px-8"
-      >
-        <div className="flex lg:flex-1">
-          <a href="#" className="-m-1.5 flex items-center gap-2 p-1.5">
-            <span className="sr-only">Manada Embroidery</span>
-            <img alt="" src={logo} className="h-14 w-24" />
-            <span className="text-primary-100 text-lg font-semibold">
-              Manada Embroidery Machine Solution
-            </span>
-          </a>
-        </div>
-        <div className="flex lg:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700"
-          >
-            <span className="sr-only">Open main menu</span>
-            <Bars3Icon aria-hidden="true" className="h-6 w-6" />
-          </button>
-        </div>
-        <div className="hidden lg:flex lg:gap-x-12">
-          {navigation.map((item) => (
-            <a
-              key={item.name}
-              href={item.href}
-              className="text-sm font-semibold leading-6 text-gray-900"
-            >
-              {item.name}
-            </a>
+    <>
+      <nav aria-label="Primary" className="hidden lg:block">
+        <ul className="flex gap-x-10">
+          {primaryNavigation.map((item) => (
+            <li key={item.to}>
+              <NavLink to={item.to} className={linkClass}>
+                {item.label}
+              </NavLink>
+            </li>
           ))}
-        </div>
-        <div className="hidden lg:flex lg:flex-1 lg:justify-end">
-          <a href="#" className="text-sm font-semibold leading-6 text-gray-900">
-            Log in <span aria-hidden="true">&rarr;</span>
-          </a>
-        </div>
+        </ul>
       </nav>
+
+      <button
+        type="button"
+        onClick={() => setMobileMenuOpen(true)}
+        aria-expanded={mobileMenuOpen}
+        className="inline-flex items-center justify-center rounded-md p-2.5 text-stone-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-stone-900/40 lg:hidden"
+      >
+        <span className="sr-only">Open main menu</span>
+        <Bars3Icon aria-hidden="true" className="h-6 w-6" />
+      </button>
+
       <Dialog
         open={mobileMenuOpen}
         onClose={setMobileMenuOpen}
-        className="lg:hidden"
+        className="relative z-50 lg:hidden"
       >
-        <div className="fixed inset-0 z-10" />
-        <DialogPanel className="fixed inset-y-0 right-0 z-10 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
+        <div className="fixed inset-0 bg-stone-900/40" aria-hidden="true" />
+        <DialogPanel className="fixed inset-y-0 right-0 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm">
           <div className="flex items-center justify-between">
-            <a href="#" className="-m-1.5 p-1.5">
-              <span className="sr-only">Your Company</span>
-              <img
-                alt=""
-                src="https://tailwindui.com/plus/img/logos/mark.svg?color=indigo&shade=600"
-                className="h-8 w-auto"
-              />
-            </a>
+            <DialogTitle className="text-base font-semibold text-stone-900">
+              Site menu
+            </DialogTitle>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="-m-2.5 rounded-md p-2.5 text-gray-700"
+              className="-m-2.5 rounded-md p-2.5 text-stone-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-stone-900/40"
             >
               <span className="sr-only">Close menu</span>
               <XMarkIcon aria-hidden="true" className="h-6 w-6" />
             </button>
           </div>
-          <div className="mt-6 flow-root">
-            <div className="-my-6 divide-y divide-gray-500/10">
-              <div className="space-y-2 py-6">
-                {navigation.map((item) => (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+          <nav aria-label="Mobile" className="mt-6">
+            <ul className="divide-y divide-stone-200">
+              {primaryNavigation.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    className={mobileLinkClass}
+                    onClick={() => setMobileMenuOpen(false)}
                   >
-                    {item.name}
-                  </a>
-                ))}
-              </div>
-              <div className="py-6">
-                <a
-                  href="#"
-                  className="-mx-3 block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                >
-                  Log in
-                </a>
-              </div>
-            </div>
-          </div>
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <p className="mt-6 text-sm text-stone-700">
+            Sales and services:{" "}
+            <a
+              href={primaryPhone.href}
+              className="rounded font-semibold text-stone-900 underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-400"
+            >
+              {primaryPhone.display}
+            </a>
+          </p>
         </DialogPanel>
       </Dialog>
-    </header>
+    </>
   );
 }
+
+export default Menu;
