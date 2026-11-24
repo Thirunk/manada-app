@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SITE, getCopyrightYear } from "../config/site";
 import { renderAt } from "../test/renderApp";
@@ -48,7 +48,9 @@ describe("landmarks and navigation", () => {
     const primary = screen.getByRole("navigation", { name: "Primary" });
     await user.click(within(primary).getByRole("link", { name: "Services" }));
 
-    expect(router.state.location.pathname).toBe("/services");
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/services"),
+    );
     expect(
       await screen.findByRole("heading", { level: 1, name: "Services" }),
     ).toBeInTheDocument();
@@ -144,10 +146,11 @@ describe("business information", () => {
     await screen.findByRole("heading", { level: 1, name: "Contact Us" });
 
     SITE.phones.forEach((phone) => {
-      expect(screen.getByRole("link", { name: phone.display })).toHaveAttribute(
-        "href",
-        phone.href,
-      );
+      expect(
+        within(screen.getByRole("main")).getByRole("link", {
+          name: phone.display,
+        }),
+      ).toHaveAttribute("href", phone.href);
     });
   });
 

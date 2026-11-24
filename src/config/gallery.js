@@ -1,41 +1,42 @@
 import { publicAsset } from "../lib/assets";
 
 /**
- * Homepage machine gallery. Alt text describes the verified content of each
- * image. Note: machine1.jpg and machine3.jpg are byte-identical, as are
- * machine2.jpg and machine4.jpg; the owner should confirm whether duplicate
- * slides are intended.
+ * Machine photographs supplied by the owner. Each entry has the unchanged
+ * original plus 240px and 640px JPEG derivatives in public/media for
+ * responsive delivery.
+ *
+ * machine3.jpg and machine4.jpg are byte-identical to machine1.jpg and
+ * machine2.jpg. They stay in public/ as original assets but are not listed
+ * here, so the gallery shows no duplicate slides.
  */
-export const MACHINE_SLIDES = [
-  {
+export const MACHINE_PHOTOS = {
+  "unik-gold-head": {
+    id: "unik-gold-head",
     src: publicAsset("machine1.jpg"),
+    thumb: publicAsset("media/machine1-240.jpg"),
+    medium: publicAsset("media/machine1-640.jpg"),
     width: 1280,
     height: 959,
     alt: "Close-up of a Unik Gold embroidery head stitching metallic beads onto fabric.",
   },
-  {
+  "unik-gold-touchscreen": {
+    id: "unik-gold-touchscreen",
     src: publicAsset("machine2.jpg"),
+    thumb: publicAsset("media/machine2-240.jpg"),
+    medium: publicAsset("media/machine2-640.jpg"),
     width: 959,
     height: 1280,
     alt: "Unik Gold multi-needle embroidery machine with a DAHAO control touchscreen in a workshop.",
   },
-  {
-    src: publicAsset("machine3.jpg"),
-    width: 1280,
-    height: 959,
-    alt: "Close-up of a Unik Gold embroidery head stitching metallic beads onto fabric.",
-  },
-  {
-    src: publicAsset("machine4.jpg"),
-    width: 959,
-    height: 1280,
-    alt: "Unik Gold multi-needle embroidery machine with a DAHAO control touchscreen in a workshop.",
-  },
+};
+
+/** Unique photographs for the homepage gallery. */
+export const MACHINE_SLIDES = [
+  MACHINE_PHOTOS["unik-gold-head"],
+  MACHINE_PHOTOS["unik-gold-touchscreen"],
 ];
 
-/**
- * Homepage promotional banners, kept exactly as provided by the owner.
- */
+/** Homepage promotional banners, kept exactly as provided by the owner. */
 export const HOME_BANNERS = [
   {
     src: publicAsset("baner1.png"),

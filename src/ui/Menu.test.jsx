@@ -77,7 +77,9 @@ describe("mobile menu", () => {
     const dialog = await openMobileMenu(user);
     await user.click(within(dialog).getByRole("link", { name: "Training" }));
 
-    expect(router.state.location.pathname).toBe("/training");
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/training"),
+    );
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
@@ -107,6 +109,6 @@ describe("mobile menu", () => {
     );
 
     expect(mobileLinks).toEqual(desktopLinks);
-    expect(desktopLinks).toHaveLength(5);
+    expect(desktopLinks).toHaveLength(6);
   });
 });

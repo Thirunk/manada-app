@@ -11,17 +11,25 @@ async function renderSlider() {
 }
 
 function currentSlideImage() {
-  const gallery = screen.getByRole("region", { name: "Machine gallery" });
-  return within(gallery).getByRole("img");
+  return within(
+    screen.getByRole("region", { name: "Machine gallery" }),
+  ).getByRole("img");
 }
 
 describe("image slider", () => {
+  it("uses only unique photographs, so there are no duplicate slides", () => {
+    expect(MACHINE_SLIDES).toHaveLength(2);
+    expect(new Set(MACHINE_SLIDES.map((slide) => slide.src)).size).toBe(2);
+  });
+
   it("starts on the first slide and exposes the position to assistive technology", async () => {
     await renderSlider();
 
     expect(currentSlideImage()).toHaveAttribute("alt", MACHINE_SLIDES[0].alt);
-    const position = screen.getByText(`Image 1 of ${MACHINE_SLIDES.length}`);
-    expect(position).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("Image 1 of 2")).toHaveAttribute(
+      "aria-live",
+      "polite",
+    );
   });
 
   it("moves to the next slide", async () => {
@@ -33,7 +41,7 @@ describe("image slider", () => {
     );
 
     expect(currentSlideImage()).toHaveAttribute("alt", MACHINE_SLIDES[1].alt);
-    expect(screen.getByText("Image 2 of 4")).toBeInTheDocument();
+    expect(screen.getByText("Image 2 of 2")).toBeInTheDocument();
   });
 
   it("moves to the previous slide", async () => {
@@ -44,13 +52,10 @@ describe("image slider", () => {
       screen.getByRole("button", { name: "Next machine image" }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Next machine image" }),
-    );
-    await user.click(
       screen.getByRole("button", { name: "Previous machine image" }),
     );
 
-    expect(screen.getByText("Image 2 of 4")).toBeInTheDocument();
+    expect(screen.getByText("Image 1 of 2")).toBeInTheDocument();
   });
 
   it("wraps from the last slide back to the first when moving next", async () => {
@@ -58,11 +63,10 @@ describe("image slider", () => {
     await renderSlider();
 
     const next = screen.getByRole("button", { name: "Next machine image" });
-    for (let step = 0; step < MACHINE_SLIDES.length; step += 1) {
-      await user.click(next);
-    }
+    await user.click(next);
+    await user.click(next);
 
-    expect(screen.getByText("Image 1 of 4")).toBeInTheDocument();
+    expect(screen.getByText("Image 1 of 2")).toBeInTheDocument();
     expect(currentSlideImage()).toHaveAttribute("alt", MACHINE_SLIDES[0].alt);
   });
 
@@ -74,16 +78,12 @@ describe("image slider", () => {
       screen.getByRole("button", { name: "Previous machine image" }),
     );
 
-    expect(screen.getByText("Image 4 of 4")).toBeInTheDocument();
-    expect(currentSlideImage()).toHaveAttribute(
-      "alt",
-      MACHINE_SLIDES[MACHINE_SLIDES.length - 1].alt,
-    );
+    expect(screen.getByText("Image 2 of 2")).toBeInTheDocument();
+    expect(currentSlideImage()).toHaveAttribute("alt", MACHINE_SLIDES[1].alt);
   });
 
   it("gives both controls accessible names", async () => {
     await renderSlider();
-
     expect(
       screen.getByRole("button", { name: "Previous machine image" }),
     ).toBeInTheDocument();

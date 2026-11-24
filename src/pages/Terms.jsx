@@ -1,16 +1,28 @@
+import { usePageMeta } from "../hooks/usePageMeta";
 import ContentPage from "../ui/ContentPage";
+import StatePanel from "../ui/StatePanel";
 
 function Terms() {
+  usePageMeta({
+    title: "Terms of Use",
+    description: "Terms of use for the Manada website.",
+    path: "/terms",
+  });
+
   return (
     <ContentPage
       title="Terms of Use"
-      path="/terms"
-      intro="This page is a placeholder. The terms of use text is pending owner and legal review."
+      eyebrow="Legal"
+      intro="Terms of use for this website."
     >
-      <p className="text-stone-700">
-        No terms of use have been published yet. Until approved text is added
-        here, do not treat this page as binding terms.
-      </p>
+      <StatePanel
+        variant="error"
+        title="Draft placeholder, not an approved legal document"
+      >
+        The terms of use have not been written or approved yet. They are not
+        binding in their current form. They will be replaced once the owner and
+        legal review have approved the text.
+      </StatePanel>
     </ContentPage>
   );
 }

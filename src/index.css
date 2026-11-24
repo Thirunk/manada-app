@@ -5,11 +5,82 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
 
+  body {
+    @apply bg-white font-sans text-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply text-navy;
+  }
+
+  /* Visible focus on light surfaces (teal) and on navy surfaces (gold). */
   :focus-visible {
-    outline: 3px solid theme(colors.blue.700);
-    outline-offset: 2px;
+    outline: 3px solid #0f766e;
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .theme-dark :focus-visible {
+    outline-color: #d4a72c;
+  }
+}
+
+@layer components {
+  .section {
+    @apply mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-teal;
+  }
+
+  .display-title {
+    @apply font-display text-3xl font-bold leading-tight tracking-tight text-navy sm:text-4xl lg:text-5xl;
+  }
+
+  .lead {
+    @apply text-base leading-7 text-body sm:text-lg sm:leading-8;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn bg-gold text-navy hover:bg-gold-hover;
+  }
+
+  .btn-secondary {
+    @apply btn border border-navy text-navy hover:bg-navy hover:text-white;
+  }
+
+  .btn-on-dark {
+    @apply btn border border-white/70 text-white hover:bg-white hover:text-navy;
+  }
+
+  .link-action {
+    @apply inline-flex items-center gap-1 font-semibold text-teal underline decoration-2 underline-offset-4 hover:text-navy;
+  }
+
+  .field-input {
+    @apply block w-full rounded-md border border-field bg-white px-3.5 py-2.5 text-sm text-navy placeholder:text-muted focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/30;
+  }
+
+  .field-input[aria-invalid="true"] {
+    @apply border-danger;
+  }
+
+  .card {
+    @apply rounded-lg border border-slate-200 bg-white shadow-card;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold;
   }
 }
 

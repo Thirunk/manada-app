@@ -1,27 +1,31 @@
 import { Link } from "react-router-dom";
-import ContentPage from "../ui/ContentPage";
+import StatePanel from "../ui/StatePanel";
 
 function NotFound() {
   return (
-    <ContentPage
-      title="Page not found"
-      intro="The page you asked for does not exist or has moved."
-    >
-      <p className="flex flex-wrap gap-6">
-        <Link
-          to="/"
-          className="font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-400"
+    <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <p className="eyebrow">Error 404</p>
+      <h1 className="display-title mt-3">Page not found</h1>
+      <div className="mt-8">
+        <StatePanel
+          variant="info"
+          title="This page does not exist or has moved."
         >
-          Return to the homepage
-        </Link>
-        <Link
-          to="/products"
-          className="font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-400"
-        >
-          View products
-        </Link>
-      </p>
-    </ContentPage>
+          <p className="mt-2">Try one of these instead:</p>
+          <p className="mt-4 flex flex-wrap gap-6">
+            <Link to="/" className="link-action">
+              Homepage
+            </Link>
+            <Link to="/products" className="link-action">
+              Products
+            </Link>
+            <Link to="/contact" className="link-action">
+              Contact us
+            </Link>
+          </p>
+        </StatePanel>
+      </div>
+    </div>
   );
 }
 

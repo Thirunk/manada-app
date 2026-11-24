@@ -4,7 +4,12 @@ const PUBLIC_ROUTES = [
   "/",
   "/products",
   "/products/unik-gold",
+  "/brands",
   "/services",
+  "/services/repair-maintenance",
+  "/faq",
+  "/login",
+  "/register",
   "/training",
   "/about",
   "/contact",
@@ -81,6 +86,11 @@ test.describe("homepage", () => {
     });
     await page.waitForLoadState("networkidle");
 
+    await page.waitForFunction(
+      () => Array.from(document.images).every((img) => img.complete),
+      null,
+      { timeout: 15000 },
+    );
     const images = page.locator("img");
     const count = await images.count();
     expect(count).toBeGreaterThan(0);
@@ -162,7 +172,10 @@ test.describe("routing", () => {
     await page.goto("/product");
     await expect(page).toHaveURL(/\/products$/);
     await expect(
-      page.getByRole("heading", { level: 1, name: "Products" }),
+      page.getByRole("heading", {
+        level: 1,
+        name: "Machines we sell and service",
+      }),
     ).toBeVisible();
   });
 
@@ -199,27 +212,27 @@ test.describe("image slider", () => {
     await page.goto("/");
     const gallery = page.getByRole("region", { name: "Machine gallery" });
     const image = gallery.getByRole("img");
-    const position = gallery.getByText(/Image \d of 4/);
+    const position = gallery.getByText(/Image \d of 2/);
     const next = page.getByRole("button", { name: "Next machine image" });
     const previous = page.getByRole("button", {
       name: "Previous machine image",
     });
 
-    await expect(position).toHaveText("Image 1 of 4");
+    await expect(position).toHaveText("Image 1 of 2");
     const firstSource = await image.getAttribute("alt");
 
     await next.click();
-    await expect(position).toHaveText("Image 2 of 4");
+    await expect(position).toHaveText("Image 2 of 2");
     await expect(image).not.toHaveAttribute("alt", firstSource);
 
     await previous.click();
-    await expect(position).toHaveText("Image 1 of 4");
+    await expect(position).toHaveText("Image 1 of 2");
 
     await previous.click();
-    await expect(position).toHaveText("Image 4 of 4");
+    await expect(position).toHaveText("Image 2 of 2");
 
     await next.click();
-    await expect(position).toHaveText("Image 1 of 4");
+    await expect(position).toHaveText("Image 1 of 2");
   });
 });
 
@@ -269,4 +282,53 @@ test.describe("public routes", () => {
       expect(errors).toEqual([]);
     });
   }
+});
+
+test.describe("design additions", () => {
+  test("design-preview portals are not served in the production build", async ({
+    page,
+  }) => {
+    await page.goto("/preview/superadmin");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Page not found" }),
+    ).toBeVisible();
+  });
+
+  test("catalogue brand filter updates the result count", async ({ page }) => {
+    await page.goto("/products");
+    await page.getByLabel("Brand").selectOption("Usha");
+    await expect(
+      page.getByRole("status").filter({ hasText: "Showing" }),
+    ).toHaveText("Showing 1 of 4 product lines");
+    await expect(page).toHaveURL(/brand=Usha/);
+  });
+
+  test("product gallery thumbnails change the main image", async ({ page }) => {
+    await page.goto("/products/unik-gold");
+    await page.getByRole("button", { name: "Show image 2 of 2" }).click();
+    await expect(
+      page.getByRole("img", { name: /DAHAO control touchscreen/ }).first(),
+    ).toBeVisible();
+  });
+
+  test("the product page shows pending video and brochure states without autoplay", async ({
+    page,
+  }) => {
+    await page.goto("/products/unik-gold");
+    await expect(page.getByText("Demonstration video pending")).toBeVisible();
+    await expect(page.locator("video")).toHaveCount(0);
+  });
+
+  test("enquiry validation shows errors and never claims the enquiry was sent", async ({
+    page,
+  }) => {
+    await page.goto("/contact#enquiry");
+    await page.getByRole("button", { name: "Send enquiry" }).click();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Please correct the following" }),
+    ).toBeVisible();
+    await expect(page.getByText("was not sent")).toHaveCount(0);
+  });
 });

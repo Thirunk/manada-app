@@ -4,9 +4,9 @@ import { SITE } from "../config/site";
 
 /**
  * Brand link to the homepage. The image is decorative because the visible
- * company name provides the accessible name for the link.
+ * company name provides the accessible name.
  */
-function Logo() {
+function Logo({ onDark = false }) {
   return (
     <Link to="/" className="flex min-w-0 items-center gap-3 rounded-md">
       <img
@@ -14,9 +14,13 @@ function Logo() {
         alt=""
         width="56"
         height="56"
-        className="h-14 w-14 flex-none rounded-md object-contain"
+        className="h-14 w-14 flex-none rounded-md bg-white object-contain p-0.5"
       />
-      <span className="text-base font-semibold leading-tight text-stone-900 sm:text-lg">
+      <span
+        className={`font-display text-base font-bold leading-tight sm:text-lg ${
+          onDark ? "text-white" : "text-navy"
+        }`}
+      >
         {SITE.name}
       </span>
     </Link>
