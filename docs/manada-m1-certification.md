@@ -20,7 +20,6 @@ Certification belongs to Codex, and merge and deployment belong to the owner.
 - Accessibility: skip link, landmarks, page titles, slider rework, mobile dialog behaviour, reduced motion, focus styles.
 - Security: removed external image hotlinks, hardened `.gitignore`, documented production headers, pattern-based secret scan.
 - Tests: unit, component, browser and accessibility suites (see below).
-- CI: `.github/workflows/ci.yml` with SHA-pinned actions and least-privilege permissions.
 - Documentation: README and the four `docs/` files.
 
 ## Verification evidence (executed locally)
@@ -38,16 +37,15 @@ Certification belongs to Codex, and merge and deployment belong to the owner.
 | Whitespace and patch check | `git diff --check`                        | See the completion report                |
 | Secret scan                | pattern scan of tracked files and history | No matches (not a dedicated scanner)     |
 
-Commands were run with Node.js 24.18.0 on Windows 11. The CI workflow has
-not run yet because the branch has not been pushed.
+Commands were run with Node.js 24.18.0 on Windows 11. No CI pipeline is
+configured in this branch; the GitHub Actions workflow was removed at the owner's request.
 
 ## Items the certifier should check
 
 1. Run `npm ci`, `npm run lint`, `npm run format:check`, `npm run test:ci`, `npm run build`, `npm run test:e2e` and `npm run test:a11y` from a clean clone.
-2. Confirm the CI workflow runs on a branch push and that all three jobs pass.
-3. Review `package-lock.json` for the expected dependency set.
-4. Confirm that no external network requests are made (`e2e/smoke.spec.js`).
-5. Spot-check the homepage slider, banners and footer against the owner's content.
+2. Review `package-lock.json` for the expected dependency set.
+3. Confirm that no external network requests are made (`e2e/smoke.spec.js`).
+4. Spot-check the homepage slider, banners and footer against the owner's content.
 
 ## Open items and blockers
 

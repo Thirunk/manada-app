@@ -100,8 +100,6 @@ docs/            Architecture, security, accessibility and M1 certification note
 
 - `main` is the protected release branch. Do not push to it directly.
 - `feature/manada-development` is the single M1 working branch.
-- CI (`.github/workflows/ci.yml`) is manual-only (workflow_dispatch). Automatic
-  pull request and push triggers are disabled.
 - There is no automatic deployment. Deployment and DNS are owner decisions.
 - Recommended branch protection and required checks are described in
   [docs/security-baseline.md](docs/security-baseline.md#github-protection).
@@ -112,7 +110,7 @@ docs/            Architecture, security, accessibility and M1 certification note
 - Homepage with the owner's machine gallery and banners, unchanged images.
 - Controlled error and not-found pages.
 - Centralized company information (phones, website, copyright year).
-- Accessibility and security foundation, automated test and CI infrastructure.
+- Accessibility and security foundation, automated test infrastructure.
 
 ## Deferred items
 
