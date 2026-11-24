@@ -1,10 +1,9 @@
 name: CI
 
+# Automatic triggers are disabled. Run this workflow manually from the
+# Actions tab (workflow_dispatch). Re-add pull_request and push triggers to
+# turn automatic CI back on.
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [feature/manada-development, main]
   workflow_dispatch:
 
 # Least privilege: the workflow only reads repository contents.
