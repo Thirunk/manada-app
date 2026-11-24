@@ -1,3 +1,32 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+build
+
+# Test artifacts
+coverage
+playwright-report
+test-results
+blob-report
+playwright/.cache
+.vitest
+
+# Environment and local secrets (never commit)
+.env
+.env.*
+!.env.example
+*.local
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*secret*.json
+
 # Logs
 logs
 *.log
@@ -7,16 +36,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Temporary files
+tmp
+temp
+.tmp
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.cache
+.eslintcache
+*.tsbuildinfo
 
-# Editor directories and files
+# Editor and OS files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
+desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
