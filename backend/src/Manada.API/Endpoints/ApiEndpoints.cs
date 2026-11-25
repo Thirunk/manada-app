@@ -4,6 +4,7 @@ using Manada.API.Auth;
 using Manada.Application.Abstractions;
 using Manada.Application.Audit;
 using Manada.Application.Common;
+using Manada.Application.Governance;
 using Manada.Application.Settings;
 using Manada.Application.Users;
 using Manada.Domain.Audit;
@@ -28,6 +29,8 @@ public static class ApiEndpoints
         me.MapGet("/", GetMeAsync).WithSummary("Current user.");
         me.MapGet("/permissions", GetPermissionsAsync).WithSummary("Current permissions.");
         me.MapPut("/profile", UpdateProfileAsync).WithSummary("Update own profile.");
+        me.MapGet("/sessions", ListOwnSessionsAsync).WithSummary("List the caller's own active sessions.");
+        me.MapPost("/sessions/{handle}/revoke", RevokeOwnSessionAsync).WithSummary("Revoke one of the caller's own sessions.");
 
         var admin = api.MapGroup("/admin");
         admin.MapGet("/users", ListUsersAsync).WithSummary("List accounts within the caller's scope.");
@@ -35,6 +38,9 @@ public static class ApiEndpoints
         admin.MapPut("/users/{id:guid}/role", ChangeRoleAsync).WithSummary("Change an account role (SuperAdmin only).");
         admin.MapPut("/users/{id:guid}/status", ChangeStatusAsync).WithSummary("Activate or deactivate an account.");
         admin.MapGet("/audit", ListAuditAsync).WithSummary("Query security audit events.");
+        admin.MapGet("/roles/matrix", GetRoleMatrixAsync).WithSummary("Read the role-permission matrix (read-only).");
+        admin.MapGet("/organization", GetOrganizationAsync).WithSummary("Read organization settings.");
+        admin.MapPut("/organization", UpdateOrganizationAsync).WithSummary("Update organization settings (row-version checked).");
         admin.MapGet("/settings", ListSettingsAsync).WithSummary("List system settings.");
         admin.MapPut("/settings/{key}", SetSettingAsync).WithSummary("Update an allowlisted system setting.");
 
@@ -145,6 +151,48 @@ public static class ApiEndpoints
     {
         var query = new AuditQuery(action, actorUserId, ParseEnum<AuditOutcome>(outcome, "outcome"), from, to, new PageRequest(page, pageSize));
         return TypedResults.Ok(await audit.ListAsync(await ActorResolver.ResolveAsync(http, db, ct), query, ct));
+    }
+
+    private static async Task<Ok<IReadOnlyList<SessionDto>>> ListOwnSessionsAsync(HttpContext http, IAppDbContext db, GovernanceService governance, CancellationToken ct) =>
+        TypedResults.Ok(await governance.ListOwnSessionsAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));
+
+    private static async Task<IResult> RevokeOwnSessionAsync(
+        string handle,
+        HttpContext http,
+        IAppDbContext db,
+        GovernanceService governance,
+        CancellationToken ct)
+    {
+        if (handle.Length != 64 || !handle.All(Uri.IsHexDigit))
+        {
+            return TypedResults.NotFound();
+        }
+
+        await governance.RevokeOwnSessionAsync(await ActorResolver.ResolveAsync(http, db, ct), handle.ToLowerInvariant(), ct);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<Ok<RoleMatrixDto>> GetRoleMatrixAsync(HttpContext http, IAppDbContext db, GovernanceService governance, CancellationToken ct) =>
+        TypedResults.Ok(await governance.GetRoleMatrixAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));
+
+    private static async Task<Ok<OrganizationDto>> GetOrganizationAsync(HttpContext http, IAppDbContext db, GovernanceService governance, CancellationToken ct) =>
+        TypedResults.Ok(await governance.GetOrganizationAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));
+
+    private static async Task<IResult> UpdateOrganizationAsync(
+        OrganizationUpdate update,
+        HttpContext http,
+        IAppDbContext db,
+        GovernanceService governance,
+        IValidator<OrganizationUpdate> validator,
+        CancellationToken ct)
+    {
+        var invalid = Validate(validator, update);
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+
+        return TypedResults.Ok(await governance.UpdateOrganizationAsync(await ActorResolver.ResolveAsync(http, db, ct), update, ct));
     }
 
     private static async Task<Ok<IReadOnlyList<SettingDto>>> ListSettingsAsync(HttpContext http, IAppDbContext db, SettingsService settings, CancellationToken ct) =>

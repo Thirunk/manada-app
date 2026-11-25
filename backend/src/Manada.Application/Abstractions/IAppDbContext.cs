@@ -17,6 +17,8 @@ public interface IAppDbContext
 
     DbSet<Organization> Organizations { get; }
 
+    DbSet<Branch> Branches { get; }
+
     DbSet<StaffProfile> StaffProfiles { get; }
 
     DbSet<CustomerProfile> CustomerProfiles { get; }

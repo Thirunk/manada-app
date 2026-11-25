@@ -93,6 +93,18 @@ const publicRoutes = [
     path: "/access-denied",
     ...named(() => import("./pages/auth/AuthScreens"), "AccessDeniedPage"),
   },
+  {
+    path: "/portal/superadmin",
+    ...named(() => import("./portal/superadmin/SuperAdminPortal"), "default"),
+    children: [
+      { index: true, ...page(() => import("./portal/superadmin/Overview")) },
+      { path: "administrators", ...page(() => import("./portal/superadmin/Administrators")) },
+      { path: "roles", ...page(() => import("./portal/superadmin/Roles")) },
+      { path: "organization", ...page(() => import("./portal/superadmin/Organization")) },
+      { path: "audit", ...page(() => import("./portal/superadmin/AuditLog")) },
+      { path: "profile", ...page(() => import("./portal/superadmin/Profile")) },
+    ],
+  },
   { path: "*", ...page(() => import("./pages/NotFound")) },
 ];
 

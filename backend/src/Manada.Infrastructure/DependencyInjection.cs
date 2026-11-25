@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IdentityProvisioningService>();
         services.AddScoped<AuditQueryService>();
         services.AddScoped<SettingsService>();
+        services.AddScoped<Manada.Application.Governance.GovernanceService>();
 
         return services;
     }

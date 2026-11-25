@@ -23,6 +23,17 @@ public sealed class Organization : Entity
 
     public IReadOnlyCollection<Branch> Branches => _branches;
 
+    public void Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
+        {
+            throw new DomainException("Organization name is required (maximum 200 characters).");
+        }
+
+        Name = name.Trim();
+        Touch();
+    }
+
     public Branch AddBranch(string name, string code)
     {
         if (_branches.Any(b => string.Equals(b.Code, code, StringComparison.OrdinalIgnoreCase)))
