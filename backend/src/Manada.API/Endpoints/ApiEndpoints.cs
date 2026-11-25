@@ -29,12 +29,14 @@ public static class ApiEndpoints
         me.MapGet("/", GetMeAsync).WithSummary("Current user.");
         me.MapGet("/permissions", GetPermissionsAsync).WithSummary("Current permissions.");
         me.MapPut("/profile", UpdateProfileAsync).WithSummary("Update own profile.");
+        me.MapGet("/account", GetOwnAccountAsync).WithSummary("Read the caller's own account and profile details.");
         me.MapGet("/sessions", ListOwnSessionsAsync).WithSummary("List the caller's own active sessions.");
         me.MapPost("/sessions/{handle}/revoke", RevokeOwnSessionAsync).WithSummary("Revoke one of the caller's own sessions.");
 
         var admin = api.MapGroup("/admin");
         admin.MapGet("/users", ListUsersAsync).WithSummary("List accounts within the caller's scope.");
         admin.MapPost("/users", CreateAccountAsync).WithSummary("Create an Admin, Staff or Customer account.");
+        admin.MapGet("/users/{id:guid}", GetManagedAccountAsync).WithSummary("Read one account within the caller's scope.");
         admin.MapPut("/users/{id:guid}/role", ChangeRoleAsync).WithSummary("Change an account role (SuperAdmin only).");
         admin.MapPut("/users/{id:guid}/status", ChangeStatusAsync).WithSummary("Activate or deactivate an account.");
         admin.MapGet("/audit", ListAuditAsync).WithSummary("Query security audit events.");
@@ -49,6 +51,12 @@ public static class ApiEndpoints
 
     private static async Task<Ok<CurrentUserDto>> GetMeAsync(HttpContext http, IAppDbContext db, UserService users, CancellationToken ct) =>
         TypedResults.Ok(await users.GetCurrentUserAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));
+
+    private static async Task<Ok<AccountDetailDto>> GetOwnAccountAsync(HttpContext http, IAppDbContext db, AccountQueryService accounts, CancellationToken ct) =>
+        TypedResults.Ok(await accounts.GetOwnAccountAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));
+
+    private static async Task<Ok<AccountDetailDto>> GetManagedAccountAsync(Guid id, HttpContext http, IAppDbContext db, AccountQueryService accounts, CancellationToken ct) =>
+        TypedResults.Ok(await accounts.GetManagedAccountAsync(await ActorResolver.ResolveAsync(http, db, ct), id, ct));
 
     private static async Task<Ok<IReadOnlyCollection<string>>> GetPermissionsAsync(HttpContext http, IAppDbContext db, UserService users, CancellationToken ct) =>
         TypedResults.Ok(await users.GetPermissionsAsync(await ActorResolver.ResolveAsync(http, db, ct), ct));

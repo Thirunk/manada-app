@@ -115,7 +115,7 @@ describe("Administrators screen", () => {
     vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}));
     render(<AdministratorsPage />);
 
-    expect(screen.getByText("Loading administrators")).toBeInTheDocument();
+    expect(screen.getByText("Loading administrator accounts")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no administrators", async () => {

@@ -14,6 +14,8 @@ export default function AuditLogPage() {
   usePageMeta({ title: "Security audit log" });
   const [page, setPage] = useState(1);
   const [outcome, setOutcome] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [state, setState] = useState({ status: "loading" });
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -23,8 +25,8 @@ export default function AuditLogPage() {
     setReloadKey((key) => key + 1);
   }
 
-  function changeOutcome(value) {
-    setOutcome(value);
+  function changeFilter(setter, value) {
+    setter(value);
     setPage(1);
     setState({ status: "loading" });
   }
@@ -33,6 +35,8 @@ export default function AuditLogPage() {
     let active = true;
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (outcome) params.set("outcome", outcome);
+    if (from) params.set("from", `${from}T00:00:00Z`);
+    if (to) params.set("to", `${to}T23:59:59Z`);
     api
       .get(`/api/admin/audit?${params.toString()}`)
       .then((result) => {
@@ -44,7 +48,7 @@ export default function AuditLogPage() {
     return () => {
       active = false;
     };
-  }, [page, outcome, reloadKey]);
+  }, [page, outcome, from, to, reloadKey]);
 
   return (
     <section aria-labelledby="audit-heading" className="space-y-6">
@@ -56,12 +60,20 @@ export default function AuditLogPage() {
       <div className="flex flex-wrap items-end gap-4">
         <label className="space-y-1.5 text-sm font-semibold text-navy">
           Outcome
-          <select className="field-input mt-1.5 block" value={outcome} onChange={(event) => changeOutcome(event.target.value)}>
+          <select className="field-input mt-1.5 block" value={outcome} onChange={(event) => changeFilter(setOutcome, event.target.value)}>
             <option value="">All outcomes</option>
             <option value="Success">Success</option>
             <option value="Denied">Denied</option>
             <option value="Failed">Failed</option>
           </select>
+        </label>
+        <label className="space-y-1.5 text-sm font-semibold text-navy">
+          From date
+          <input className="field-input mt-1.5 block" type="date" value={from} onChange={(event) => changeFilter(setFrom, event.target.value)} />
+        </label>
+        <label className="space-y-1.5 text-sm font-semibold text-navy">
+          To date
+          <input className="field-input mt-1.5 block" type="date" value={to} onChange={(event) => changeFilter(setTo, event.target.value)} />
         </label>
       </div>
 

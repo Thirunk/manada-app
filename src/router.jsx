@@ -102,7 +102,34 @@ const publicRoutes = [
       { path: "roles", ...page(() => import("./portal/superadmin/Roles")) },
       { path: "organization", ...page(() => import("./portal/superadmin/Organization")) },
       { path: "audit", ...page(() => import("./portal/superadmin/AuditLog")) },
-      { path: "profile", ...page(() => import("./portal/superadmin/Profile")) },
+      { path: "profile", ...page(() => import("./portal/shared/ProfilePage")) },
+    ],
+  },
+  {
+    path: "/portal/admin",
+    ...named(() => import("./portal/admin/AdminPortal"), "default"),
+    children: [
+      { index: true, ...page(() => import("./portal/admin/Dashboard")) },
+      { path: "staff", ...page(() => import("./portal/admin/StaffPage")) },
+      { path: "customers", ...page(() => import("./portal/admin/CustomersPage")) },
+      { path: "accounts/:id", ...page(() => import("./portal/admin/AccountDetailPage")) },
+      { path: "profile", ...page(() => import("./portal/shared/ProfilePage")) },
+    ],
+  },
+  {
+    path: "/portal/staff",
+    ...named(() => import("./portal/staff/StaffPortal"), "default"),
+    children: [
+      { index: true, ...page(() => import("./portal/staff/Dashboard")) },
+      { path: "profile", ...page(() => import("./portal/shared/ProfilePage")) },
+    ],
+  },
+  {
+    path: "/portal/customer",
+    ...named(() => import("./portal/customer/CustomerPortal"), "default"),
+    children: [
+      { index: true, ...page(() => import("./portal/customer/Dashboard")) },
+      { path: "profile", ...page(() => import("./portal/shared/ProfilePage")) },
     ],
   },
   { path: "*", ...page(() => import("./pages/NotFound")) },
