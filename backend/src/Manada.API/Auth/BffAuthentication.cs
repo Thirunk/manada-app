@@ -263,6 +263,8 @@ public static class BffAuthentication
         var provisioning = services.GetRequiredService<IdentityProvisioningService>();
         var db = services.GetRequiredService<ManadaDbContext>();
         var principal = context.Principal ?? throw new InvalidOperationException("The identity principal is missing.");
+        // Properties carry the step-up marker. A missing bag means no step-up was requested, so start an empty one.
+        context.Properties ??= new AuthenticationProperties();
 
         var issuer = principal.FindFirst("iss")?.Value ?? string.Empty;
         var subject = principal.FindFirst("sub")?.Value ?? string.Empty;
@@ -355,7 +357,8 @@ public static class BffAuthentication
     }
 
     /// <summary>Authentication assurance from the provider "acr" claim. Missing or non-numeric values are level 0.</summary>
-    internal static int ParseAssurance(string? acr) => int.TryParse(acr, out var level) ? level : 0;
+    internal static int ParseAssurance(string? acr) =>
+        int.TryParse(acr, NumberStyles.None, CultureInfo.InvariantCulture, out var level) ? level : 0;
 
     /// <summary>Privileged roles require at least the MFA assurance level.</summary>
     internal static bool AssuranceSatisfied(int level) => level >= AssuranceLevels.Mfa;

@@ -32,4 +32,7 @@ public interface IAppDbContext
     DbSet<AuthSession> AuthSessions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Discards tracked changes that a failed save left behind.</summary>
+    void DiscardPendingChanges();
 }

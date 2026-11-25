@@ -39,4 +39,7 @@ public sealed class ManadaDbContext(DbContextOptions<ManadaDbContext> options) :
         modelBuilder.HasDefaultSchema("manada");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ManadaDbContext).Assembly);
     }
+
+    /// <summary>Detaches every tracked change. Used after a failed save so the retry sees the database, not the failed insert.</summary>
+    public void DiscardPendingChanges() => ChangeTracker.Clear();
 }

@@ -136,7 +136,7 @@ public sealed class UserService(
             }
 
             AddAudit(actor, "account.created", AuditOutcome.Success, TargetUser, user.Id.ToString(), $"role={request.Role}");
-            await SaveAsync(ct);
+            await SaveNewAccountAsync(email, ct);
 
             var invitationSent = await TrySendInvitationAsync(subject, requiredActions, ct);
             return new CreateAccountResult(ToSummary(user), invitationSent);
@@ -358,6 +358,28 @@ public sealed class UserService(
         if (user.RowVersion != expected)
         {
             throw new ConflictException("The account was changed by someone else. Reload it and try again.");
+        }
+    }
+
+    /// <summary>
+    /// Saves a new account. A concurrent request may have taken the same email after the pre-check;
+    /// that surfaces as a unique violation, which is reported as a conflict rather than a server error.
+    /// </summary>
+    private async Task SaveNewAccountAsync(string email, CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            db.DiscardPendingChanges();
+            if (await db.Users.AnyAsync(u => u.Email == email, ct))
+            {
+                throw new ConflictException("An account with this email address already exists.");
+            }
+
+            throw;
         }
     }
 

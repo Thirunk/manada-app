@@ -69,7 +69,8 @@ public sealed class IdentityProvisioningService(IAppDbContext db)
         }
         catch (DbUpdateException)
         {
-            // A concurrent sign-in created the same identity. Reload it instead of failing.
+            // A concurrent sign-in created the same identity. Discard the failed insert, then reload it instead of failing.
+            db.DiscardPendingChanges();
             var raced = await FindByIdentityAsync(identity.Issuer, identity.Subject, ct);
             if (raced is null)
             {
