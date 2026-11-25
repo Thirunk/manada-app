@@ -276,7 +276,7 @@ async function adminToken() {
  * authenticator setup again, clears any brute-force lockout from earlier attempts, and sends a new
  * actions email. Test and recovery use only. The lockout policy itself is unchanged.
  */
-export async function reissueInvitation(email) {
+export async function reissueInvitation(email, { requireTotp = false } = {}) {
   const token = await adminToken();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -309,7 +309,10 @@ export async function reissueInvitation(email) {
   const full = await (
     await fetch(`${base}/users/${user.id}`, { headers })
   ).json();
-  const required = ["VERIFY_EMAIL", "UPDATE_PASSWORD", "CONFIGURE_TOTP"];
+  // Authenticator enrollment is optional for every role in this release (owner decision).
+  const required = requireTotp
+    ? ["VERIFY_EMAIL", "UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+    : ["VERIFY_EMAIL", "UPDATE_PASSWORD"];
   await fetch(`${base}/users/${user.id}`, {
     method: "PUT",
     headers,
