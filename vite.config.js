@@ -10,6 +10,16 @@ const designPreview = process.env.VITE_ENABLE_DESIGN_PREVIEW === "true";
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   plugins: [react()],
+  server: {
+    // Same-origin BFF: the browser talks only to the Vite origin, which forwards
+    // API, session and OIDC callback paths to the backend. Tokens never reach the browser.
+    proxy: {
+      "/api": { target: "http://127.0.0.1:5080", changeOrigin: false },
+      "/bff": { target: "http://127.0.0.1:5080", changeOrigin: false },
+      "/signin-oidc": { target: "http://127.0.0.1:5080", changeOrigin: false },
+      "/signout-callback-oidc": { target: "http://127.0.0.1:5080", changeOrigin: false },
+    },
+  },
   define: {
     // Dev server (command "serve") and tests always include the preview.
     __DESIGN_PREVIEW__: JSON.stringify(command === "serve" || designPreview),

@@ -84,9 +84,18 @@ public sealed class IdentityProvisioningService(IAppDbContext db)
         return new ProvisionedUser(user.Id, AppRole.Customer, status, Created: true);
     }
 
-    private async Task<AppUser?> FindByIdentityAsync(string issuer, string subject, CancellationToken ct) =>
-        await db.Users.Include(u => u.Identities)
-            .FirstOrDefaultAsync(u => u.Identities.Any(i => i.Issuer == issuer && i.Subject == subject), ct);
+    private async Task<AppUser?> FindByIdentityAsync(string issuer, string subject, CancellationToken ct)
+    {
+        // Identities are queried directly; the user's identity collection is mapped to a backing field.
+        var identity = await db.ExternalIdentities.AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Issuer == issuer && i.Subject == subject, ct);
+        if (identity is null)
+        {
+            return null;
+        }
+
+        return await db.Users.Include("_identities").FirstOrDefaultAsync(u => u.Id == identity.UserId, ct);
+    }
 
     private static ProvisionedUser Existing(AppUser user, VerifiedIdentity identity)
     {

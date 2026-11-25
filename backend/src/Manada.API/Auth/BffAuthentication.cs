@@ -289,17 +289,28 @@ public static class BffAuthentication
     /// <summary>The database role is authoritative. Provider roles must agree with it.</summary>
     internal static bool ProviderRoleMismatch(AppRole role, IEnumerable<string> providerRoles)
     {
+        // Privileged provider roles must match the database role exactly. Customers carry the
+        // default composite role, which the provider does not expand, so only privileged claims are checked.
+        var privileged = new[] { "superadmin", "admin", "staff" };
+        var presentPrivileged = providerRoles
+            .Select(r => r.ToLowerInvariant())
+            .Where(r => privileged.Contains(r))
+            .Distinct()
+            .ToArray();
+
+        if (role == AppRole.Customer)
+        {
+            return presentPrivileged.Length > 0;
+        }
+
         var expected = role switch
         {
             AppRole.SuperAdmin => "superadmin",
             AppRole.Admin => "admin",
-            AppRole.Staff => "staff",
-            _ => "customer",
+            _ => "staff",
         };
 
-        var known = new[] { "superadmin", "admin", "staff", "customer" };
-        var present = providerRoles.Where(r => known.Contains(r, StringComparer.OrdinalIgnoreCase)).Select(r => r.ToLowerInvariant()).ToArray();
-        return present.Length != 1 || present[0] != expected;
+        return presentPrivileged.Length != 1 || presentPrivileged[0] != expected;
     }
 
     /// <summary>Accepts a second-factor method reported by the provider in the authentication methods claim.</summary>

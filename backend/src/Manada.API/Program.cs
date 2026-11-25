@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.DataProtection;
 using FluentValidation;
 using Manada.API.Auth;
@@ -36,6 +37,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateAccountRequestValidat
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddHealthChecks().AddDbContextCheck<ManadaDbContext>("database");
 
 var app = builder.Build();

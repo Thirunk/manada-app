@@ -300,7 +300,7 @@ public sealed class UserService(
     }
 
     private async Task<AppUser> LoadUserAsync(Guid userId, CancellationToken ct) =>
-        await db.Users.Include(u => u.Identities).FirstOrDefaultAsync(u => u.Id == userId, ct)
+        await db.Users.Include("_identities").FirstOrDefaultAsync(u => u.Id == userId, ct)
         ?? throw new NotFoundException("The account was not found.");
 
     private async Task<string> PrimarySubjectAsync(AppUser user, CancellationToken ct)
