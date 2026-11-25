@@ -19,6 +19,7 @@ namespace Manada.Application.Users;
 public sealed class UserService(
     IAppDbContext db,
     IIdentityProviderAdmin identityProvider,
+    IIdentityIssuer identityIssuer,
     IPermissionService permissions)
 {
     private const string TargetUser = "User";
@@ -121,7 +122,7 @@ public sealed class UserService(
         try
         {
             var user = new AppUser(email, request.FullName, request.Role, organizationId, UserStatus.PendingVerification);
-            user.AttachIdentity(IdentityIssuer, subject);
+            user.AttachIdentity(identityIssuer.Issuer, subject);
             db.Users.Add(user);
 
             if (request.Role == AppRole.Staff)
@@ -226,7 +227,6 @@ public sealed class UserService(
 
     // ----- helpers -----
 
-    public const string IdentityIssuer = "keycloak";
 
     private static string RequiredCreatePermission(AppRole role) => role switch
     {
@@ -305,8 +305,8 @@ public sealed class UserService(
 
     private async Task<string> PrimarySubjectAsync(AppUser user, CancellationToken ct)
     {
-        var identity = user.Identities.FirstOrDefault(i => i.Issuer == IdentityIssuer)
-            ?? await db.ExternalIdentities.FirstOrDefaultAsync(i => i.UserId == user.Id && i.Issuer == IdentityIssuer, ct);
+        var identity = user.Identities.FirstOrDefault(i => i.Issuer == identityIssuer.Issuer)
+            ?? await db.ExternalIdentities.FirstOrDefaultAsync(i => i.UserId == user.Id && i.Issuer == identityIssuer.Issuer, ct);
         return identity?.Subject ?? throw new ConflictException("This account is not linked to an identity provider record.");
     }
 

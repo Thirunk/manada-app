@@ -37,7 +37,7 @@ public static class BootstrapCommands
         try
         {
             var user = new AppUser(email, "Manada SuperAdmin", AppRole.SuperAdmin, organizationId, UserStatus.PendingVerification);
-            user.AttachIdentity("keycloak", subject);
+            user.AttachIdentity(services.GetRequiredService<IIdentityIssuer>().Issuer, subject);
             db.Users.Add(user);
             db.SystemSettings.Add(new SystemSetting(CompletedSettingKey, DateTimeOffset.UtcNow.ToString("o"), null));
             db.AuditEvents.Add(new AuditEvent("superadmin.bootstrapped", AuditOutcome.Success, user.Id, "bootstrap", "User", user.Id.ToString(), null, null));

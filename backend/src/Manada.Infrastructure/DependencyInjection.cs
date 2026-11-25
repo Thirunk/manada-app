@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityProviderAdmin>(sp => sp.GetRequiredService<KeycloakAdminClient>());
 
         services.AddScoped<IPermissionService, PermissionService>();
+        services.AddSingleton<IIdentityIssuer, ConfiguredIdentityIssuer>();
         services.AddScoped<UserService>();
         services.AddScoped<IdentityProvisioningService>();
         services.AddScoped<AuditQueryService>();
