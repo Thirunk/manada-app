@@ -1,3 +1,4 @@
+using Manada.Application.Identity;
 using Manada.Application.Abstractions;
 using Manada.Domain.Audit;
 using Manada.Domain.Identity;
@@ -30,7 +31,10 @@ public static class BootstrapCommands
         }
 
         var organizationId = await db.Organizations.Select(o => o.Id).OrderBy(id => id).FirstAsync();
-        var actions = new[] { "VERIFY_EMAIL", "UPDATE_PASSWORD", "CONFIGURE_TOTP" };
+        var mfa = services.GetRequiredService<MfaEnforcement>();
+        var actions = mfa.SuperAdmin
+            ? new[] { "VERIFY_EMAIL", "UPDATE_PASSWORD", "CONFIGURE_TOTP" }
+            : new[] { "VERIFY_EMAIL", "UPDATE_PASSWORD" };
 
         var subject = await identity.CreateUserAsync(new IdentityUserRequest(email.Trim().ToLowerInvariant(), "Manada", "SuperAdmin", AppRole.SuperAdmin, actions));
 

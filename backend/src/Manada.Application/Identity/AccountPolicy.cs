@@ -57,12 +57,6 @@ public static class AccountPolicy
         return true;
     }
 
-    /// <summary>Whether MFA is required for the role. Staff MFA enforcement is configurable.</summary>
-    public static bool RequiresMfa(AppRole role, bool staffMfaEnforced) => role switch
-    {
-        AppRole.SuperAdmin => true,
-        AppRole.Admin => true,
-        AppRole.Staff => staffMfaEnforced,
-        _ => false,
-    };
+    /// <summary>Whether MFA (level-2 assurance) is required for the role under the configured enforcement.</summary>
+    public static bool RequiresMfa(AppRole role, MfaEnforcement enforcement) => enforcement.Requires(role);
 }

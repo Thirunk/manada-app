@@ -21,7 +21,8 @@ public sealed class UserService(
     IIdentityProviderAdmin identityProvider,
     IIdentityIssuer identityIssuer,
     IPermissionService permissions,
-    IUniqueViolationDetector unique)
+    IUniqueViolationDetector unique,
+    MfaEnforcement mfa)
 {
     private const string TargetUser = "User";
 
@@ -245,10 +246,10 @@ public sealed class UserService(
         _ => PermissionCodes.UsersManageCustomers,
     };
 
-    private static IReadOnlyCollection<string> RequiredActionsFor(AppRole role)
+    private IReadOnlyCollection<string> RequiredActionsFor(AppRole role)
     {
         var actions = new List<string> { "VERIFY_EMAIL", "UPDATE_PASSWORD" };
-        if (AccountPolicy.RequiresMfa(role, staffMfaEnforced: true))
+        if (AccountPolicy.RequiresMfa(role, mfa))
         {
             actions.Add("CONFIGURE_TOTP");
         }

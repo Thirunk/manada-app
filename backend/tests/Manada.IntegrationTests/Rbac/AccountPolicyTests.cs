@@ -50,18 +50,29 @@ public sealed class AccountPolicyTests
     }
 
     [Theory]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    public void Staff_mfa_follows_the_configured_setting(bool enforced, bool expected) =>
-        Assert.Equal(expected, AccountPolicy.RequiresMfa(AppRole.Staff, enforced));
+    [InlineData(AppRole.SuperAdmin)]
+    [InlineData(AppRole.Admin)]
+    [InlineData(AppRole.Staff)]
+    [InlineData(AppRole.Customer)]
+    public void Mfa_is_optional_for_every_role_by_default(AppRole role) =>
+        Assert.False(AccountPolicy.RequiresMfa(role, MfaEnforcement.Disabled));
 
     [Theory]
     [InlineData(AppRole.SuperAdmin)]
     [InlineData(AppRole.Admin)]
-    public void Privileged_roles_always_require_mfa(AppRole role) =>
-        Assert.True(AccountPolicy.RequiresMfa(role, staffMfaEnforced: false));
+    [InlineData(AppRole.Staff)]
+    [InlineData(AppRole.Customer)]
+    public void Enabling_enforcement_for_one_role_affects_only_that_role(AppRole enforced)
+    {
+        var policy = new MfaEnforcement(
+            SuperAdmin: enforced == AppRole.SuperAdmin,
+            Admin: enforced == AppRole.Admin,
+            Staff: enforced == AppRole.Staff,
+            Customer: enforced == AppRole.Customer);
 
-    [Fact]
-    public void Customers_never_have_mfa_enforced_by_policy() =>
-        Assert.False(AccountPolicy.RequiresMfa(AppRole.Customer, staffMfaEnforced: true));
+        foreach (var role in Enum.GetValues<AppRole>())
+        {
+            Assert.Equal(role == enforced, AccountPolicy.RequiresMfa(role, policy));
+        }
+    }
 }

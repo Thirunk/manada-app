@@ -38,6 +38,8 @@ public static class BffAuthentication
         var bff = configuration.GetSection(BffOptions.SectionName).Get<BffOptions>() ?? new BffOptions();
         var idp = configuration.GetSection(IdentityProviderOptions.SectionName).Get<IdentityProviderOptions>() ?? new IdentityProviderOptions();
 
+        var mfa = configuration.GetSection(MfaEnforcementOptions.SectionName).Get<MfaEnforcementOptions>() ?? new MfaEnforcementOptions();
+        services.AddSingleton(new MfaEnforcement(mfa.SuperAdmin, mfa.Admin, mfa.Staff, mfa.Customer));
         services.AddSingleton<DbTicketStore>();
         services.AddHttpClient("keycloak-token");
         services.Configure<BffOptions>(configuration.GetSection(BffOptions.SectionName));
@@ -173,7 +175,7 @@ public static class BffAuthentication
         // Privileged sessions must have been established with the required assurance level.
         // Token refresh keeps the original level; it never raises it.
         var sessionAssurance = ParseAssurance(context.Principal?.FindFirst(ManadaClaims.Assurance)?.Value);
-        if (AccountPolicy.RequiresMfa(account.Role, staffMfaEnforced: true) && !AssuranceSatisfied(sessionAssurance))
+        if (AccountPolicy.RequiresMfa(account.Role, services.GetRequiredService<MfaEnforcement>()) && !AssuranceSatisfied(sessionAssurance))
         {
             await RejectAsync(context);
             return;
@@ -289,7 +291,7 @@ public static class BffAuthentication
             }
 
             var assurance = ParseAssurance(principal.FindFirst("acr")?.Value);
-            if (AccountPolicy.RequiresMfa(provisioned.Role, staffMfaEnforced: true) && !AssuranceSatisfied(assurance))
+            if (AccountPolicy.RequiresMfa(provisioned.Role, services.GetRequiredService<MfaEnforcement>()) && !AssuranceSatisfied(assurance))
             {
                 if (context.Properties.Items.ContainsKey(StepUpItem))
                 {

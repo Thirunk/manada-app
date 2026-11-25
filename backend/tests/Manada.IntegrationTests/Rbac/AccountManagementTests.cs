@@ -1,5 +1,6 @@
 using Manada.Application.Abstractions;
 using Manada.Application.Common;
+using Manada.Application.Identity;
 using Manada.Application.Users;
 using Manada.Domain.Audit;
 using Manada.Domain.Identity;
@@ -28,9 +29,9 @@ public sealed class AccountManagementTests(PostgresFixture postgres)
         await h.Db.Users.AsNoTracking().SingleAsync(u => u.Id == userId);
 
     [Fact]
-    public async Task SuperAdmin_provisions_an_admin_pending_verification_with_totp_required()
+    public async Task SuperAdmin_provisions_an_admin_pending_verification_with_totp_required_when_enforcement_is_enabled()
     {
-        await using var h = await RbacHarness.CreateAsync(postgres);
+        await using var h = await RbacHarness.CreateAsync(postgres, new MfaEnforcement(SuperAdmin: true, Admin: true, Staff: true, Customer: true));
         var superAdmin = await Seed.UserAsync(h.Db, AppRole.SuperAdmin);
 
         var result = await h.Users.CreateAccountAsync(Seed.Actor(superAdmin), Request(AppRole.Admin, "New.Admin@Manada.test"));
@@ -42,6 +43,18 @@ public sealed class AccountManagementTests(PostgresFixture postgres)
         Assert.Contains("CONFIGURE_TOTP", provider.RequiredActions);
         Assert.True(await h.Db.AuditEvents.AnyAsync(a =>
             a.Action == "account.created" && a.Outcome == AuditOutcome.Success && a.ActorUserId == superAdmin.Id));
+    }
+
+    [Fact]
+    public async Task With_the_default_policy_admins_are_created_without_a_totp_requirement()
+    {
+        await using var h = await RbacHarness.CreateAsync(postgres);
+        var superAdmin = await Seed.UserAsync(h.Db, AppRole.SuperAdmin);
+
+        await h.Users.CreateAccountAsync(Seed.Actor(superAdmin), Request(AppRole.Admin));
+
+        var provider = Assert.Single(h.Identity.Created);
+        Assert.DoesNotContain("CONFIGURE_TOTP", provider.RequiredActions);
     }
 
     [Fact]
@@ -314,7 +327,7 @@ public sealed class AccountManagementTests(PostgresFixture postgres)
         {
             // Each attempt uses its own DbContext, because a DbContext is not safe for concurrent use.
             await using var db = h.Database.CreateContext();
-            var service = new UserService(db, new FakeIdentityProvider(), new FixedIssuer(), new PermissionService(db), new PostgresUniqueViolationDetector());
+            var service = new UserService(db, new FakeIdentityProvider(), new FixedIssuer(), new PermissionService(db), new PostgresUniqueViolationDetector(), MfaEnforcement.Disabled);
             try
             {
                 await service.CreateAccountAsync(actor, request);

@@ -200,7 +200,7 @@ public sealed class HttpSecurityTests(PostgresFixture postgres)
     [InlineData(AppRole.Admin, 1)]
     public async Task Privileged_sessions_without_mfa_assurance_are_rejected(AppRole role, int assurance)
     {
-        await using var host = await HttpHost.CreateAsync(postgres);
+        await using var host = await HttpHost.CreateAsync(postgres, mfaEnforced: true);
         await using var db = host.Database.CreateContext();
         var account = await Seed.UserAsync(db, role);
         var key = await host.SessionAsync(account, assurance);
@@ -233,7 +233,7 @@ public sealed class HttpSecurityTests(PostgresFixture postgres)
     [Fact]
     public async Task A_token_refresh_does_not_raise_authentication_assurance()
     {
-        await using var host = await HttpHost.CreateAsync(postgres);
+        await using var host = await HttpHost.CreateAsync(postgres, mfaEnforced: true);
         await using var db = host.Database.CreateContext();
         var admin = await Seed.UserAsync(db, AppRole.Admin);
         // The access token is near expiry, so the middleware performs a controlled refresh on this request.
@@ -477,16 +477,32 @@ public sealed class HttpSecurityTests(PostgresFixture postgres)
 
 
     [Fact]
-    public async Task Staff_sessions_without_mfa_assurance_are_rejected_under_the_current_policy()
+    public async Task Staff_sessions_without_mfa_assurance_are_rejected_when_enforcement_is_enabled()
     {
-        // Current policy: the BFF and the account service always require MFA assurance for Staff
-        // (staffMfaEnforced: true). The staff.mfa.enforced setting is not read at request time; see the M3 report.
-        await using var host = await HttpHost.CreateAsync(postgres);
+        await using var host = await HttpHost.CreateAsync(postgres, mfaEnforced: true);
         await using var db = host.Database.CreateContext();
         var staff = await Seed.UserAsync(db, AppRole.Staff);
         var key = await host.SessionAsync(staff, assurance: 0);
 
         AssertNotAllowed(await SendAsync(host, HttpMethod.Get, "/api/me", key));
+    }
+
+    [Theory]
+    [InlineData(AppRole.SuperAdmin)]
+    [InlineData(AppRole.Admin)]
+    [InlineData(AppRole.Staff)]
+    [InlineData(AppRole.Customer)]
+    public async Task Password_only_sessions_are_accepted_for_every_role_under_the_default_policy(AppRole role)
+    {
+        // Owner decision for this release: MFA is optional for all roles. Default enforcement is disabled.
+        await using var host = await HttpHost.CreateAsync(postgres);
+        await using var db = host.Database.CreateContext();
+        var account = await Seed.UserAsync(db, role);
+        var key = await host.SessionAsync(account, assurance: 0);
+
+        var response = await SendAsync(host, HttpMethod.Get, "/api/me", key);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private sealed record OrganizationDto(Guid Id, string Name, uint RowVersion, List<BranchDto> Branches);

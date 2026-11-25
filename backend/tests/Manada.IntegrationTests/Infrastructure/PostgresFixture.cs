@@ -19,6 +19,7 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithDatabase("postgres")
         .WithUsername("postgres")
         .WithPassword("test-only-password")
+        .WithCommand("-c", "max_connections=300")
         .Build();
 
     public async Task InitializeAsync()
@@ -51,7 +52,13 @@ public sealed class PostgresFixture : IAsyncLifetime
             .Options);
 
     private string ConnectionStringFor(string database) =>
-        new NpgsqlConnectionStringBuilder(_container.GetConnectionString()) { Database = database }.ConnectionString;
+        new NpgsqlConnectionStringBuilder(_container.GetConnectionString())
+        {
+            Database = database,
+            // Each test database has its own pool; keep idle connections few so the suite stays within max_connections.
+            MaxPoolSize = 5,
+            ConnectionIdleLifetime = 10,
+        }.ConnectionString;
 
     private async Task ExecuteAdminAsync(string sql)
     {

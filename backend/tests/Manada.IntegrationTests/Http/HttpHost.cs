@@ -28,9 +28,13 @@ public sealed class ManadaWebFactory : WebApplicationFactory<Program>
     /// host configuration callbacks run. An environment variable is read at host creation, so it is used here.
     /// Test collections are serial, so only one factory uses the variable at a time.
     /// </summary>
-    public ManadaWebFactory(string connectionString)
+    public ManadaWebFactory(string connectionString, bool mfaEnforced = false)
     {
         Environment.SetEnvironmentVariable(ConnectionVariable, connectionString);
+        foreach (var role in new[] { "SuperAdmin", "Admin", "Staff", "Customer" })
+        {
+            Environment.SetEnvironmentVariable("MfaEnforcement__" + role, mfaEnforced ? "true" : "false");
+        }
     }
 
     private const string ConnectionVariable = "ConnectionStrings__ManadaDb";
@@ -42,6 +46,10 @@ public sealed class ManadaWebFactory : WebApplicationFactory<Program>
     {
         await base.DisposeAsync();
         Environment.SetEnvironmentVariable(ConnectionVariable, null);
+        foreach (var role in new[] { "SuperAdmin", "Admin", "Staff", "Customer" })
+        {
+            Environment.SetEnvironmentVariable("MfaEnforcement__" + role, null);
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -92,10 +100,10 @@ public sealed class HttpHost : IAsyncDisposable
 
     public IServiceProvider Services => _factory.Services;
 
-    public static async Task<HttpHost> CreateAsync(PostgresFixture postgres)
+    public static async Task<HttpHost> CreateAsync(PostgresFixture postgres, bool mfaEnforced = false)
     {
         var database = await postgres.CreateDatabaseAsync();
-        var factory = new ManadaWebFactory(database.ConnectionString);
+        var factory = new ManadaWebFactory(database.ConnectionString, mfaEnforced);
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         return new HttpHost(database, factory, client);
     }
