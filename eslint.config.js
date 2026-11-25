@@ -30,6 +30,15 @@ export default [
     },
   },
   {
+    // Node scripts (Keycloak provisioning) use Node globals; the browser globals stay out of them.
+    files: ["**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node },
+    },
+  },
+  {
     files: ["**/*.{js,jsx}"],
     languageOptions: {
       ecmaVersion: "latest",

@@ -24,7 +24,6 @@ async function latestMessageLink(to) {
 
 test("customer registers, verifies email, signs in, and signs out @identity", async ({
   page,
-  request,
   baseURL,
 }) => {
   const email = `customer.${Date.now()}@manada.local`;
