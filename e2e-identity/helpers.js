@@ -181,6 +181,8 @@ export async function completeRequiredActions(
 }
 
 /** Signs in through the BFF with a password and, when prompted, a one-time authenticator code. */
+let otpProbe = 0;
+
 export async function signInWithTotp(
   page,
   email,
@@ -190,15 +192,25 @@ export async function signInWithTotp(
   await page.goto("/bff/login?returnUrl=/");
   await page.waitForLoadState("domcontentloaded");
 
-  for (let step = 0; step < 8 && !page.url().startsWith(APP); step += 1) {
+  for (let step = 0; step < 12 && !page.url().startsWith(APP); step += 1) {
     debug(`SIGNIN step=${step} ${await describe(page)}`);
+    const passwordVisible = await page
+      .locator("#password")
+      .isVisible()
+      .catch(() => false);
+    const usernameVisible = await page
+      .locator("#username")
+      .isVisible()
+      .catch(() => false);
     if (
-      await page
-        .locator("#username")
+      passwordVisible &&
+      !(await page
+        .locator("#otp")
         .isVisible()
-        .catch(() => false)
+        .catch(() => false))
     ) {
-      await page.locator("#username").fill(email);
+      // Full form, or the step-up re-authentication form where only the password is asked.
+      if (usernameVisible) await page.locator("#username").fill(email);
       await page.locator("#password").fill(password);
       await page.locator("#kc-login").click();
     } else if (
@@ -209,7 +221,12 @@ export async function signInWithTotp(
     ) {
       await waitForWindowAfterEnrollment();
       await waitForSafeWindow();
-      await page.locator("#otp").fill(totp(secret));
+      const probe = process.env.IDENTITY_OTP_PROBE
+        ? [0, -1, 1, -2, 2][otpProbe++ % 5]
+        : 0;
+      const otpCode = totp(secret, Date.now() + probe * 30000);
+      debug(`OTPPROBE offset=${probe} code=${otpCode}`);
+      await page.locator("#otp").fill(otpCode);
       await page.locator("#kc-login").click();
     } else {
       await page.waitForTimeout(500);

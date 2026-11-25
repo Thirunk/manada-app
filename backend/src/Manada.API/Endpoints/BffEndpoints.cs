@@ -20,10 +20,17 @@ public static class BffEndpoints
     {
         var group = app.MapGroup("/bff").WithTags("Session");
 
-        group.MapGet("/login", (string? returnUrl) =>
-                Results.Challenge(
-                    new AuthenticationProperties { RedirectUri = SafeReturnUrl(returnUrl) },
-                    [BffAuthentication.OidcScheme]))
+        group.MapGet("/login", (string? returnUrl, bool? stepUp) =>
+                {
+                    var properties = new AuthenticationProperties { RedirectUri = SafeReturnUrl(returnUrl) };
+                    if (stepUp == true)
+                    {
+                        // Step-up: the account needs level-2 assurance, so the provider must re-authenticate with OTP.
+                        properties.Items[BffAuthentication.StepUpItem] = "true";
+                    }
+
+                    return Results.Challenge(properties, [BffAuthentication.OidcScheme]);
+                })
             .AllowAnonymous()
             .WithSummary("Starts the sign-in flow (authorization code with PKCE).");
 

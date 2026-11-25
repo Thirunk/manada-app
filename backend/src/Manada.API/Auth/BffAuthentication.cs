@@ -31,6 +31,7 @@ public static class BffAuthentication
 {
     public const string CookieScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     public const string OidcScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    public const string StepUpItem = "manada.stepUp";
 
     public static IServiceCollection AddBffAuthentication(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
@@ -107,6 +108,13 @@ public static class BffAuthentication
                     {
                         // Exact redirect URI from configuration. Host headers are never trusted.
                         context.ProtocolMessage.RedirectUri = bff.SignInRedirectUri;
+                        // Request level-2 authentication assurance. Privileged roles must reach it through OTP;
+                        // the Keycloak flow treats the request as voluntary for other roles.
+                        if (context.Properties.Items.ContainsKey(StepUpItem))
+                        {
+                            context.ProtocolMessage.SetParameter("acr_values", AssuranceLevels.Mfa.ToString());
+                            context.ProtocolMessage.Prompt = "login";
+                        }
                         return Task.CompletedTask;
                     },
                     OnRedirectToIdentityProviderForSignOut = context =>
@@ -145,8 +153,27 @@ public static class BffAuthentication
             return;
         }
 
-        var status = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => (UserStatus?)u.Status).FirstOrDefaultAsync();
-        if (status != UserStatus.Active)
+        var account = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.Status, u.Role })
+            .FirstOrDefaultAsync();
+        if (account is null || account.Status != UserStatus.Active)
+        {
+            await RejectAsync(context);
+            return;
+        }
+
+        // The session must still match the database role. A role change forces re-authentication.
+        if (context.Principal?.FindFirst(ManadaClaims.Role)?.Value != account.Role.ToString())
+        {
+            await RejectAsync(context);
+            return;
+        }
+
+        // Privileged sessions must have been established with the required assurance level.
+        // Token refresh keeps the original level; it never raises it.
+        var sessionAssurance = ParseAssurance(context.Principal?.FindFirst(ManadaClaims.Assurance)?.Value);
+        if (AccountPolicy.RequiresMfa(account.Role, staffMfaEnforced: true) && !AssuranceSatisfied(sessionAssurance))
         {
             await RejectAsync(context);
             return;
@@ -243,7 +270,6 @@ public static class BffAuthentication
         var emailVerified = string.Equals(principal.FindFirst("email_verified")?.Value, "true", StringComparison.OrdinalIgnoreCase);
         var name = principal.FindFirst("name")?.Value ?? email;
         var providerRoles = principal.FindAll("roles").Select(c => c.Value).ToArray();
-        var amr = principal.FindAll("amr").Select(c => c.Value).ToArray();
 
         try
         {
@@ -260,9 +286,19 @@ public static class BffAuthentication
                 throw new ForbiddenException("Your account roles are not consistent. Contact Manada.");
             }
 
-            if (AccountPolicy.RequiresMfa(provisioned.Role, staffMfaEnforced: true) && !HasSecondFactor(amr))
+            var assurance = ParseAssurance(principal.FindFirst("acr")?.Value);
+            if (AccountPolicy.RequiresMfa(provisioned.Role, staffMfaEnforced: true) && !AssuranceSatisfied(assurance))
             {
-                throw new ForbiddenException("Two-step verification is required for this account.");
+                if (context.Properties.Items.ContainsKey(StepUpItem))
+                {
+                    // Step-up was already attempted and the provider still did not return level-2 assurance.
+                    throw new ForbiddenException("Two-step verification is required for this account.");
+                }
+
+                // Native step-up: send the browser back through sign-in requesting level-2 assurance.
+                context.HandleResponse();
+                context.Response.Redirect($"{bff.FrontendOrigin}/bff/login?stepUp=true");
+                return;
             }
 
             var identity = new ClaimsIdentity(CookieScheme, "name", "roles");
@@ -270,6 +306,7 @@ public static class BffAuthentication
             identity.AddClaim(new Claim("iss", issuer));
             identity.AddClaim(new Claim(ManadaClaims.UserId, provisioned.UserId.ToString()));
             identity.AddClaim(new Claim(ManadaClaims.Role, provisioned.Role.ToString()));
+            identity.AddClaim(new Claim(ManadaClaims.Assurance, assurance.ToString()));
             identity.AddClaim(new Claim("name", name));
 
             context.Principal = new ClaimsPrincipal(identity);
@@ -317,8 +354,10 @@ public static class BffAuthentication
         return presentPrivileged.Length != 1 || presentPrivileged[0] != expected;
     }
 
-    /// <summary>Accepts a second-factor method reported by the provider in the authentication methods claim.</summary>
-    internal static bool HasSecondFactor(IEnumerable<string> amr) =>
-        amr.Any(m => m is "otp" or "mfa" or "hwk" or "swk");
+    /// <summary>Authentication assurance from the provider "acr" claim. Missing or non-numeric values are level 0.</summary>
+    internal static int ParseAssurance(string? acr) => int.TryParse(acr, out var level) ? level : 0;
+
+    /// <summary>Privileged roles require at least the MFA assurance level.</summary>
+    internal static bool AssuranceSatisfied(int level) => level >= AssuranceLevels.Mfa;
 }
 

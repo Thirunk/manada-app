@@ -112,4 +112,12 @@ public static class ManadaClaims
     public const string UserId = "manada.user_id";
     public const string Role = "manada.role";
     public const string SessionKey = "manada.session_key";
+    public const string Assurance = "manada.assurance";
+}
+
+/// <summary>Authentication assurance levels (Keycloak level of authentication, reported as the acr claim).</summary>
+public static class AssuranceLevels
+{
+    public const int Password = 1;
+    public const int Mfa = 2;
 }

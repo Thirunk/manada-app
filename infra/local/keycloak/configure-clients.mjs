@@ -37,7 +37,20 @@ const accessToken = await token();
 
 const clients = await api("GET", "/clients?clientId=manada-bff", accessToken);
 const bff = clients[0];
-await api("PUT", `/clients/${bff.id}`, accessToken, { ...bff, secret: bffSecret, fullScopeAllowed: true });
+await api("PUT", `/clients/${bff.id}`, accessToken, { ...bff, secret: bffSecret, fullScopeAllowed: false });
+
+// Explicit scope mapping: the BFF client receives only the four Manada realm roles, never full scope.
+const manadaRoles = await Promise.all(["superadmin", "admin", "staff", "customer"].map((name) => api("GET", `/roles/${name}`, accessToken)));
+await api("POST", `/clients/${bff.id}/scope-mappings/realm`, accessToken, manadaRoles);
+
+// Authentication assurance (acr) is issued only through the standard acr scope.
+const acrScope = (await api("GET", "/client-scopes", accessToken)).find((scope) => scope.name === "acr");
+if (acrScope) {
+  await fetch(`${base}/admin/realms/${realm}/clients/${bff.id}/default-client-scopes/${acrScope.id}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
 
 const backendClients = await api("GET", "/clients?clientId=manada-backend", accessToken);
 const backend = backendClients[0];
