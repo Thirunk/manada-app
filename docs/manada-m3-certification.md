@@ -101,6 +101,8 @@ Accounts are created through the application's own flows: SuperAdmin invitation,
 - Focused backend regression: `dotnet test backend/tests/Manada.IntegrationTests/Manada.IntegrationTests.csproj --no-build --filter FullyQualifiedName~AccountPolicyTests` passed **26/26**. `SettingsService` now has no allowlisted or writable `staff.mfa.enforced` setting; deployment-controlled `MfaEnforcement` remains the only enforcement path.
 - The attempted filtered integration run was stopped during test-host/container startup after hanging without assertions; unchanged full backend evidence remains the previously recorded 165/165.
 - The inherited M2 form-test synchronization issue and real 200%/400% zoom and screen-reader verification are mandatory M7 UAT follow-up items. OTP remains deferred under the owner-approved policy.
+- Final authenticated execution against the production artifact origin (`localhost:5173`) was attempted with the existing live accounts. Keycloak and PostgreSQL confirmed `superadmin.test@manada.local` and the existing customer account are present and active. The historical local test password was held in-process only and was not accepted by the SuperAdmin account.
+- Focused identity result: **2 executed, 0 passed, 2 failed, 6 did not run**. The SuperAdmin sign-in test failed because `/bff/session` remained unauthenticated; the dependent portal-features test then timed out waiting for the authenticated administrator form. No credential reset was performed. The exact remaining requirement is the owner/Claude-provided current `MANADA_TEST_PASSWORD` for the existing accounts.
 
 ## 7. Known limitation (open)
 
