@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Manada.API/Manada.API.csproj" />
+    <Project Path="src/Manada.Application/Manada.Application.csproj" />
+    <Project Path="src/Manada.Domain/Manada.Domain.csproj" />
+    <Project Path="src/Manada.Infrastructure/Manada.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Manada.IntegrationTests/Manada.IntegrationTests.csproj" />
+    <Project Path="tests/Manada.UnitTests/Manada.UnitTests.csproj" />
+  </Folder>
+</Solution>
