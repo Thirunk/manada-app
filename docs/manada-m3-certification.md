@@ -104,6 +104,13 @@ Accounts are created through the application's own flows: SuperAdmin invitation,
 - Final authenticated execution against the production artifact origin (`localhost:5173`) was attempted with the existing live accounts. Keycloak and PostgreSQL confirmed `superadmin.test@manada.local` and the existing customer account are present and active. The historical local test password was held in-process only and was not accepted by the SuperAdmin account.
 - Focused identity result: **2 executed, 0 passed, 2 failed, 6 did not run**. The SuperAdmin sign-in test failed because `/bff/session` remained unauthenticated; the dependent portal-features test then timed out waiting for the authenticated administrator form. No credential reset was performed. The exact remaining requirement is the owner/Claude-provided current `MANADA_TEST_PASSWORD` for the existing accounts.
 
+## 8. Final authenticated closure
+
+- Owner-authorized local credential reset: the local Keycloak 26.4 container and `manada` realm were confirmed. Only `superadmin.test@manada.local` and `customer.1795598928309@manada.local` were reset; no production or actual customer account was involved. A generated temporary password was held in-process only and was not printed, persisted or committed.
+- The API was started with the existing local Keycloak client secrets and PostgreSQL passwords from ignored `infra/local/.env`; no security or authorization setting was weakened.
+- Production artifact authenticated verification: **8 executed, 8 passed, 0 failed, 0 skipped** using `dist/` served through the preview BFF proxy on `localhost:5173`. Coverage included SuperAdmin, Admin, Staff and Customer authentication, portal features, protected access, unauthorized rejection, access-denied logout and session termination.
+- The earlier credential/setup failures were environmental and are superseded by this successful run. M3 final certification: **PASS**. Ready for M4.
+
 ## 7. Known limitation (open)
 
 - OTP authentication is **not verified**. Authenticator enrollment is not offered to users. The current release does not depend on it, because MFA is optional.
