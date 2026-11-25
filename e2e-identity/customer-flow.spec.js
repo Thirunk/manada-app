@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { TEST_PASSWORD } from "./helpers.js";
 
 const MAILPIT = "http://localhost:8025";
-const PASSWORD = "Sample-Pass-2026!";
+const PASSWORD = TEST_PASSWORD;
 
 async function latestMessageLink(to) {
   for (let attempt = 0; attempt < 30; attempt += 1) {

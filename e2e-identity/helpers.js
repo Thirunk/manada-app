@@ -1,17 +1,21 @@
 import { createHmac } from "node:crypto";
 
+try {
+  process.loadEnvFile("infra/local/.env");
+} catch {
+  // Optional when the variables are already set in the environment.
+}
+
 export const MAILPIT = "http://localhost:8025";
 export const KEYCLOAK = "http://localhost:8081";
 export const APP = "http://localhost:5173";
 
 // Test-only password for synthetic identities. Never used outside local development.
-export const TEST_PASSWORD = "Sample-Pass-2026!";
-
-// Loads local development secrets for the identity test process (git-ignored file). Values are never logged.
-try {
-  process.loadEnvFile("infra/local/.env");
-} catch {
-  // Optional when the variables are already set in the environment.
+export const TEST_PASSWORD = process.env.MANADA_TEST_PASSWORD;
+if (!TEST_PASSWORD) {
+  throw new Error(
+    "Missing MANADA_TEST_PASSWORD. Set it in infra/local/.env or the test environment.",
+  );
 }
 
 const TOTP_STEP_MS = 30_000;

@@ -3,7 +3,7 @@
 Status: **local verification complete for the owner-approved M3 scope. Not pushed. Not merged. Not deployed.**
 
 Branch: `feature/manada-development`
-Baseline before this pass: `d6ea3134cd1ab31feef5a15448695551e306fe2d`
+Certification baseline: `40e26b9a81a1d230f9c849e9b1be428a54353045`
 MFA policy checkpoint: `e8506fe799b72b453042ebbb77a8d3bafed4c613`
 Real-stack identity tests: `69987c705944f088d6029cf1442f5de09197fd53`, `3c24177ea6f2186c1ece8908e26962809dc43e87`
 
@@ -17,17 +17,17 @@ Real-stack identity tests: `69987c705944f088d6029cf1442f5de09197fd53`, `3c24177e
 
 ## 2. Verification
 
-| Area | Result | Evidence |
-|---|---|---|
-| Backend integration tests (PostgreSQL 18, real migrations) | **165 executed, 165 passed, 0 failed, 0 skipped** | `dotnet test` on `Manada.IntegrationTests` |
-| HTTP-level security tests (real pipeline, real cookie validation, PostgreSQL) | **31 executed, 31 passed** (included in the 165) | `Http/HttpSecurityTests.cs` |
-| Concurrency and persistence recovery | Passed; repeated three times for stability | `Persistence/ConcurrencyRecoveryTests.cs`, concurrent sign-in and provisioning tests |
-| Frontend unit and component tests | **115 executed, 115 passed** (mocked API; development fixtures, not browser certification) | `npx vitest run` from `/D/...` |
-| Real-stack identity tests (Keycloak 26, PostgreSQL, API, Vite dev server, Mailpit, Chromium) | **9 executed, 9 passed, 0 failed, 0 skipped** | `npx playwright test -c playwright.identity.config.js e2e-identity/` |
-| Full repository lint | **Exit 0** | `npx eslint .` |
-| Production build | **Passes** | `npm run build` |
-| Production fixture exclusion | **0 matches** in `dist` for preview and test markers (preview routes, sample names, test e-mail addresses, test password, portal loader) | string search over `dist` |
-| Build warnings (backend) | 0 | `dotnet test` build output |
+| Area                                                                                         | Result                                                                                                                                   | Evidence                                                                             |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Backend integration tests (PostgreSQL 18, real migrations)                                   | **165 executed, 165 passed, 0 failed, 0 skipped**                                                                                        | `dotnet test` on `Manada.IntegrationTests`                                           |
+| HTTP-level security tests (real pipeline, real cookie validation, PostgreSQL)                | **31 executed, 31 passed** (included in the 165)                                                                                         | `Http/HttpSecurityTests.cs`                                                          |
+| Concurrency and persistence recovery                                                         | Passed; repeated three times for stability                                                                                               | `Persistence/ConcurrencyRecoveryTests.cs`, concurrent sign-in and provisioning tests |
+| Frontend unit and component tests                                                            | **115 executed, 115 passed** (mocked API; development fixtures, not browser certification)                                               | `npx vitest run` from `/D/...`                                                       |
+| Real-stack identity tests (Keycloak 26, PostgreSQL, API, Vite dev server, Mailpit, Chromium) | **9 executed, 9 passed, 0 failed, 0 skipped**                                                                                            | `npx playwright test -c playwright.identity.config.js e2e-identity/`                 |
+| Full repository lint                                                                         | **Exit 0**                                                                                                                               | `npx eslint .`                                                                       |
+| Production build                                                                             | **Passes**                                                                                                                               | `npm run build`                                                                      |
+| Production fixture exclusion                                                                 | **0 matches** in `dist` for preview and test markers (preview routes, sample names, test e-mail addresses, test password, portal loader) | string search over `dist`                                                            |
+| Build warnings (backend)                                                                     | 0                                                                                                                                        | `dotnet test` build output                                                           |
 
 ### 2.1 Real-stack browser verification (Chromium, real Keycloak password sign-in)
 
@@ -74,19 +74,28 @@ Accounts are created through the application's own flows: SuperAdmin invitation,
 
 ## 5. Findings
 
-| Priority | Finding | Status |
-|---|---|---|
-| P2 | Access-denied pages have no sign-out control (the portal frame is not rendered). A signed-in user on an access-denied page must navigate to their own portal to sign out. | Open. Test navigates to the caller's portal first. |
-| P2 | The `staff.mfa.enforced` database setting is still allowlisted and writable by SuperAdmin, but it no longer controls enforcement. It is misleading. | Open. Should be removed from the settings allowlist in a cleanup. |
-| P2 | Two test files contain the local development test password as a constant (`Sample-Pass-2026!`) for the local Keycloak. It is not a production credential, but it is committed. | Open. Should move to an environment variable. |
-| P2 | Vitest must be run from the `/D/...` path on this Windows environment (section 3). | Workaround documented. |
-| P1 | None open. | |
+| Priority | Finding                                                                                                                | Status                                                                                                                                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P2       | Access-denied pages had no sign-out control.                                                                           | **Resolved** in `src/portal/RequirePortal.jsx`; uses the existing BFF logout mechanism and reports failures accessibly.                                        |
+| P2       | The `staff.mfa.enforced` database setting was allowlisted and writable although deployment configuration controls MFA. | **Resolved** in `backend/src/Manada.Application/Settings/SettingsService.cs`; no writable staff MFA setting remains.                                           |
+| P2       | Identity tests contained a committed local development password.                                                       | **Resolved** in `e2e-identity/helpers.js` and `e2e-identity/customer-flow.spec.js`; `MANADA_TEST_PASSWORD` is required from ignored environment configuration. |
+| P2       | Vitest must be run from the `/D/...` path on this Windows environment (section 3).                                     | Workaround documented.                                                                                                                                         |
+| P1       | None open.                                                                                                             |                                                                                                                                                                |
 
-## 6. Known limitation (open)
+## 6. Independent certification and targeted closure
+
+- Baseline `40e26b9a81a1d230f9c849e9b1be428a54353045` was verified locally before the closure changes.
+- The three actionable P2 findings above were remediated without changing the owner-approved MFA policy or reopening OTP work.
+- Existing evidence was reused: 165/165 backend integration tests, 31/31 HTTP security tests, 115/115 frontend tests, 9/9 real-stack password identity tests, 4/4 functional portal flows, lint, build and production-fixture exclusion.
+- Targeted closure checks: source review of issuer/audience/expiration, role and ownership enforcement, CSRF/session/logout paths, audit and SQLSTATE handling; `git diff --check`; secret-pattern scan; production build and `dist` preview scan; and repository status verification.
+- The final local certification commit is the commit containing this document update. It is not pushed, merged or deployed.
+- Result: **PASS**. M3 is complete for the owner-approved password-authentication scope and ready for M4. OTP enrollment/authentication, production deployment verification and real browser zoom/screen-reader testing remain explicit deferrals.
+
+## 7. Known limitation (open)
 
 - OTP authentication is **not verified**. Authenticator enrollment is not offered to users. The current release does not depend on it, because MFA is optional.
 
-## 7. Scope statement
+## 8. Scope statement
 
 - Local verification only. Nothing was pushed, no pull request was opened, nothing was merged into `main`, CI was not restored, and nothing was deployed.
 - Real-stack tests run against the local development stack (Keycloak 26.4, PostgreSQL 18, Mailpit). They do not verify production infrastructure.

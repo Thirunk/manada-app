@@ -15,12 +15,8 @@ public sealed record SettingDto(string Key, string Value, DateTimeOffset Updated
 /// </summary>
 public sealed class SettingsService(IAppDbContext db, IPermissionService permissions)
 {
-    public const string StaffMfaEnforced = "staff.mfa.enforced";
-
-    private static readonly IReadOnlyDictionary<string, string[]> Allowed = new Dictionary<string, string[]>
-    {
-        [StaffMfaEnforced] = ["true", "false"],
-    };
+    private static readonly IReadOnlyDictionary<string, string[]> Allowed =
+        new Dictionary<string, string[]>();
 
     public async Task<IReadOnlyList<SettingDto>> ListAsync(ActorContext actor, CancellationToken ct = default)
     {
@@ -30,12 +26,6 @@ public sealed class SettingsService(IAppDbContext db, IPermissionService permiss
             .Select(s => new SettingDto(s.Key, s.Value, s.UpdatedUtc, s.RowVersion))
             .ToListAsync(ct);
     }
-
-    public async Task<bool> IsStaffMfaEnforcedAsync(CancellationToken ct = default) =>
-        await db.SystemSettings.AsNoTracking()
-            .Where(s => s.Key == StaffMfaEnforced)
-            .Select(s => s.Value)
-            .FirstOrDefaultAsync(ct) == "true";
 
     public async Task<SettingDto> SetAsync(ActorContext actor, string key, string value, uint? expectedRowVersion, CancellationToken ct = default)
     {
