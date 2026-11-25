@@ -1,6 +1,7 @@
 using Manada.Application.Users;
 using Manada.Infrastructure.Identity;
 using Manada.Infrastructure.Persistence;
+
 using Manada.IntegrationTests.Infrastructure;
 
 namespace Manada.IntegrationTests.Rbac;
@@ -14,7 +15,7 @@ public sealed class RbacHarness : IAsyncDisposable
         Db = db;
         Identity = new FakeIdentityProvider();
         Permissions = new PermissionService(db);
-        Users = new UserService(db, Identity, new FixedIssuer(), Permissions);
+        Users = new UserService(db, Identity, new FixedIssuer(), Permissions, new PostgresUniqueViolationDetector());
     }
 
     public TestDatabase Database { get; }

@@ -35,6 +35,9 @@ public interface IAppDbContext
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Discards tracked changes that a failed save left behind.</summary>
-    void DiscardPendingChanges();
+    /// <summary>
+    /// Detaches only the entities that belong to one account whose insert failed: the user, its profile,
+    /// its identities and its creation audit record. Other pending changes in the context are preserved.
+    /// </summary>
+    void DetachPendingAccount(Guid userId);
 }

@@ -20,7 +20,8 @@ public sealed class UserService(
     IAppDbContext db,
     IIdentityProviderAdmin identityProvider,
     IIdentityIssuer identityIssuer,
-    IPermissionService permissions)
+    IPermissionService permissions,
+    IUniqueViolationDetector unique)
 {
     private const string TargetUser = "User";
 
@@ -136,7 +137,7 @@ public sealed class UserService(
             }
 
             AddAudit(actor, "account.created", AuditOutcome.Success, TargetUser, user.Id.ToString(), $"role={request.Role}");
-            await SaveNewAccountAsync(email, ct);
+            await SaveNewAccountAsync(user.Id, ct);
 
             var invitationSent = await TrySendInvitationAsync(subject, requiredActions, ct);
             return new CreateAccountResult(ToSummary(user), invitationSent);
@@ -365,16 +366,18 @@ public sealed class UserService(
     /// Saves a new account. A concurrent request may have taken the same email after the pre-check;
     /// that surfaces as a unique violation, which is reported as a conflict rather than a server error.
     /// </summary>
-    private async Task SaveNewAccountAsync(string email, CancellationToken ct)
+    private async Task SaveNewAccountAsync(Guid userId, CancellationToken ct)
     {
         try
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception)
         {
-            db.DiscardPendingChanges();
-            if (await db.Users.AnyAsync(u => u.Email == email, ct))
+            // Only this account's failed entries are detached; unrelated pending changes stay tracked.
+            db.DetachPendingAccount(userId);
+
+            if (unique.IsUniqueViolation(exception, UniqueConstraints.UserEmail))
             {
                 throw new ConflictException("An account with this email address already exists.");
             }

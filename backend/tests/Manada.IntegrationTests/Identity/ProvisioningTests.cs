@@ -1,6 +1,7 @@
 using Manada.Application.Common;
 using Manada.Application.Identity;
 using Manada.Domain.Identity;
+using Manada.Infrastructure.Persistence;
 using Manada.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -24,7 +25,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
     {
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         var provisioned = await service.ProvisionAsync(Identity("new.customer@manada.test", "subject-new", verified: true));
 
@@ -43,7 +44,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
     {
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.ProvisionAsync(Identity("escalate@manada.test", "subject-escalate", providerRoles: providerRole)));
@@ -56,7 +57,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
     {
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         var provisioned = await service.ProvisionAsync(Identity("pending@manada.test", "subject-pending", verified: false));
 
@@ -68,7 +69,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
     {
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
         var first = await service.ProvisionAsync(Identity("repeat@manada.test", "subject-repeat"));
 
         var second = await service.ProvisionAsync(Identity("repeat@manada.test", "subject-repeat"));
@@ -84,7 +85,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
         var existing = await Seed.UserAsync(db, AppRole.Customer, issuer: "https://other.test/realms/x", subject: "shared-subject");
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         var provisioned = await service.ProvisionAsync(new VerifiedIdentity(
             Issuer, "shared-subject", "other.issuer@manada.test", true, "Other Issuer", Array.Empty<string>()));
@@ -99,7 +100,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
         var existing = await Seed.UserAsync(db, AppRole.Customer, issuer: "https://other.test/realms/x", subject: "owner-subject");
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         await Assert.ThrowsAsync<ConflictException>(() =>
             service.ProvisionAsync(Identity(existing.Email, "attacker-subject")));
@@ -113,7 +114,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
         var disabled = await Seed.UserAsync(db, AppRole.Customer, UserStatus.Disabled, Issuer, "subject-disabled");
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             service.ProvisionAsync(new VerifiedIdentity(Issuer, "subject-disabled", disabled.Email, true, "Disabled", Array.Empty<string>())));
@@ -125,7 +126,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
         var customer = await Seed.UserAsync(db, AppRole.Customer, issuer: Issuer, subject: "subject-claims");
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         var provisioned = await service.ProvisionAsync(new VerifiedIdentity(
             Issuer, "subject-claims", customer.Email, true, "Customer", new[] { "superadmin" }));
@@ -141,7 +142,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         var database = await postgres.CreateDatabaseAsync();
         await using var db = database.CreateContext();
         var pending = await Seed.UserAsync(db, AppRole.Customer, UserStatus.PendingVerification, Issuer, "subject-activate");
-        var service = new IdentityProvisioningService(db);
+        var service = new IdentityProvisioningService(db, new PostgresUniqueViolationDetector());
 
         var provisioned = await service.ProvisionAsync(new VerifiedIdentity(
             Issuer, "subject-activate", pending.Email, true, "Activate", Array.Empty<string>()));
@@ -160,7 +161,7 @@ public sealed class ProvisioningTests(PostgresFixture postgres)
         {
             // Each sign-in uses its own DbContext, because a DbContext is not safe for concurrent use.
             await using var db = database.CreateContext();
-            return await new IdentityProvisioningService(db).ProvisionAsync(identity);
+            return await new IdentityProvisioningService(db, new PostgresUniqueViolationDetector()).ProvisionAsync(identity);
         }
 
         var results = await Task.WhenAll(SignInAsync(), SignInAsync());

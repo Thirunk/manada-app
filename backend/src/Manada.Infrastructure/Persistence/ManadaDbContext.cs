@@ -40,6 +40,48 @@ public sealed class ManadaDbContext(DbContextOptions<ManadaDbContext> options) :
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ManadaDbContext).Assembly);
     }
 
-    /// <summary>Detaches every tracked change. Used after a failed save so the retry sees the database, not the failed insert.</summary>
-    public void DiscardPendingChanges() => ChangeTracker.Clear();
+    /// <summary>
+    /// Detaches the added entities of one failed account insert and nothing else. Changes to unrelated
+    /// entities stay tracked, so they are not silently discarded.
+    /// </summary>
+    public void DetachPendingAccount(Guid userId)
+    {
+        var idText = userId.ToString();
+        var failed = ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added)
+            .Where(e => e.Entity switch
+            {
+                AppUser user => user.Id == userId,
+                StaffProfile staff => staff.UserId == userId,
+                CustomerProfile customer => customer.UserId == userId,
+                ExternalIdentity identity => identity.UserId == userId,
+                AuditEvent audit => audit.TargetId == idText && audit.Action is "account.created" or "account.provisioned",
+                _ => false,
+            })
+            .ToList();
+
+        foreach (var entry in failed)
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+}
+
+/// <summary>Recognises PostgreSQL unique violations (SQLSTATE 23505) by constraint name.</summary>
+public sealed class PostgresUniqueViolationDetector : IUniqueViolationDetector
+{
+    public bool IsUniqueViolation(Exception exception, string constraintName)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is Npgsql.PostgresException pg
+                && pg.SqlState == Npgsql.PostgresErrorCodes.UniqueViolation
+                && string.Equals(pg.ConstraintName, constraintName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

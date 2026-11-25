@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddSingleton<IIdentityIssuer, ConfiguredIdentityIssuer>();
         services.AddScoped<UserService>();
+        services.AddSingleton<IUniqueViolationDetector, PostgresUniqueViolationDetector>();
         services.AddScoped<IdentityProvisioningService>();
         services.AddScoped<AuditQueryService>();
         services.AddScoped<SettingsService>();

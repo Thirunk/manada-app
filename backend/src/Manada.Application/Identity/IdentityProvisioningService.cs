@@ -1,10 +1,10 @@
 using Manada.Application.Abstractions;
 using Manada.Application.Common;
+using Microsoft.EntityFrameworkCore;
 using Manada.Domain.Audit;
 using Manada.Domain.Customers;
 using Manada.Domain.Identity;
 using Manada.Domain.Common;
-using Microsoft.EntityFrameworkCore;
 
 namespace Manada.Application.Identity;
 
@@ -27,7 +27,7 @@ public sealed record ProvisionedUser(Guid UserId, AppRole Role, UserStatus Statu
 /// - Accounts are never linked by email alone. An email owned by a different identity is a conflict.
 /// - Disabled accounts cannot sign in.
 /// </summary>
-public sealed class IdentityProvisioningService(IAppDbContext db)
+public sealed class IdentityProvisioningService(IAppDbContext db, IUniqueViolationDetector unique)
 {
     private static readonly string[] PrivilegedProviderRoles = ["superadmin", "admin", "staff"];
 
@@ -67,13 +67,29 @@ public sealed class IdentityProvisioningService(IAppDbContext db)
         {
             await db.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception)
         {
-            // A concurrent sign-in created the same identity. Discard the failed insert, then reload it instead of failing.
-            db.DiscardPendingChanges();
+            // Only this account's failed entries are detached. Unrelated pending changes stay tracked.
+            db.DetachPendingAccount(user.Id);
+
+            var emailTaken = unique.IsUniqueViolation(exception, UniqueConstraints.UserEmail);
+            var identityTaken = unique.IsUniqueViolation(exception, UniqueConstraints.ExternalIdentitySubject);
+            if (!emailTaken && !identityTaken)
+            {
+                // Any other database failure is not a sign-in race and is not reported as one.
+                throw;
+            }
+
+            // The same person may have signed in twice at once. Both requests carry the same email, so the
+            // email index can fire before the identity index. If this identity now exists, reload it.
             var raced = await FindByIdentityAsync(identity.Issuer, identity.Subject, ct);
             if (raced is null)
             {
+                if (emailTaken)
+                {
+                    throw new ConflictException("This email address is already associated with another account. Contact Manada for help.");
+                }
+
                 throw;
             }
 

@@ -4,6 +4,7 @@ using Manada.Application.Users;
 using Manada.Domain.Audit;
 using Manada.Domain.Identity;
 using Manada.Infrastructure.Identity;
+using Manada.Infrastructure.Persistence;
 using Manada.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -313,7 +314,7 @@ public sealed class AccountManagementTests(PostgresFixture postgres)
         {
             // Each attempt uses its own DbContext, because a DbContext is not safe for concurrent use.
             await using var db = h.Database.CreateContext();
-            var service = new UserService(db, new FakeIdentityProvider(), new FixedIssuer(), new PermissionService(db));
+            var service = new UserService(db, new FakeIdentityProvider(), new FixedIssuer(), new PermissionService(db), new PostgresUniqueViolationDetector());
             try
             {
                 await service.CreateAccountAsync(actor, request);

@@ -36,6 +36,9 @@ public sealed class FakeIdentityProvider : IIdentityProviderAdmin
     /// <summary>Runs after the application's email pre-check and before the account row is written. Used to force a race deterministically.</summary>
     public Func<IdentityUserRequest, Task>? BeforeCreate { get; set; }
 
+    /// <summary>When set, the next created identity uses this subject. Used to force a deterministic identity collision.</summary>
+    public string? FixedSubject { get; set; }
+
     public async Task<string> CreateUserAsync(IdentityUserRequest request, CancellationToken cancellationToken = default)
     {
         Calls.Add($"create:{request.Email}:{request.Role}");
@@ -51,7 +54,7 @@ public sealed class FakeIdentityProvider : IIdentityProviderAdmin
         }
 
         Created.Add(request);
-        var subject = Guid.NewGuid().ToString("N");
+        var subject = FixedSubject ?? Guid.NewGuid().ToString("N");
         RoleBySubject[subject] = request.Role;
         return subject;
     }
