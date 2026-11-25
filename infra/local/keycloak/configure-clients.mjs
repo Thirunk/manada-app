@@ -37,7 +37,7 @@ const accessToken = await token();
 
 const clients = await api("GET", "/clients?clientId=manada-bff", accessToken);
 const bff = clients[0];
-await api("PUT", `/clients/${bff.id}`, accessToken, { ...bff, secret: bffSecret });
+await api("PUT", `/clients/${bff.id}`, accessToken, { ...bff, secret: bffSecret, fullScopeAllowed: true });
 
 const backendClients = await api("GET", "/clients?clientId=manada-backend", accessToken);
 const backend = backendClients[0];

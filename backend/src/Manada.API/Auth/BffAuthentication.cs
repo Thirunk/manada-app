@@ -253,6 +253,10 @@ public static class BffAuthentication
             var mismatch = ProviderRoleMismatch(provisioned.Role, providerRoles);
             if (mismatch)
             {
+                services.GetRequiredService<ILoggerFactory>().CreateLogger("Manada.Auth").LogWarning("Provider roles [{Roles}] do not match application role {Role}. Claim types: {Claims}", string.Join(",", providerRoles), provisioned.Role, string.Join(",", principal.Claims.Select(c => c.Type).Distinct()));
+            }
+            if (mismatch)
+            {
                 throw new ForbiddenException("Your account roles are not consistent. Contact Manada.");
             }
 
@@ -278,7 +282,7 @@ public static class BffAuthentication
         }
         catch (Exception exception) when (exception is ForbiddenException or ConflictException or DependencyFailureException)
         {
-            db.AuditEvents.Add(new AuditEvent("auth.signin.denied", AuditOutcome.Denied, null, subject, "User", null, null, exception.GetType().Name));
+            db.AuditEvents.Add(new AuditEvent("auth.signin.denied", AuditOutcome.Denied, null, subject, "User", null, null, exception.Message));
             await db.SaveChangesAsync();
 
             context.HandleResponse();

@@ -7,6 +7,17 @@ export const APP = "http://localhost:5173";
 // Test-only password for synthetic identities. Never used outside local development.
 export const TEST_PASSWORD = "Sample-Pass-2026!";
 
+// Loads local development secrets for the identity test process (git-ignored file). Values are never logged.
+try {
+  process.loadEnvFile("infra/local/.env");
+} catch {
+  // Optional when the variables are already set in the environment.
+}
+
+const TOTP_STEP_MS = 30_000;
+
+// Time of the most recent authenticator code submitted during enrollment. Keycloak does not accept
+// the same code twice, so sign-in must use a code from a later 30-second window.
 let lastTotpSubmittedAt = 0;
 
 const debug = (message) => {
@@ -39,30 +50,34 @@ export async function latestActionLink(
 }
 
 /**
- * RFC 6238 TOTP (SHA-1, 6 digits, 30-second step). Keycloak displays the enrollment key as raw
- * text, and the HMAC key is those bytes. Base32 keys are decoded when the input is valid base32.
+ * RFC 6238 TOTP (HMAC-SHA1, 6 digits, 30-second step) matching the realm policy.
+ * Keycloak uses the displayed enrollment string as raw bytes for the HMAC key.
  */
 export function totp(secret, at = Date.now()) {
-  // Keycloak uses the displayed enrollment string as raw bytes for the HMAC key, regardless of its characters.
-  const key = Buffer.from(secret.replace(/s+/g, ""), "utf8");
-
-  const counter = Math.floor(at / 1000 / 30);
+  const key = Buffer.from(secret.replace(/\s+/g, ""), "utf8");
   const buffer = Buffer.alloc(8);
-  buffer.writeBigUInt64BE(BigInt(counter));
+  buffer.writeBigUInt64BE(BigInt(Math.floor(at / TOTP_STEP_MS)));
   const digest = createHmac("sha1", key).update(buffer).digest();
   const offset = digest[digest.length - 1] & 0xf;
   const code = (digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
   return String(code).padStart(6, "0");
 }
 
-/** Waits for a fresh TOTP window so a code is never reused within one period. */
-export async function waitForFreshWindow(secondsNeeded = 5) {
-  const remaining = 30 - ((Date.now() / 1000) % 30);
-  if (remaining < secondsNeeded) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, (remaining + 0.5) * 1000),
-    );
+/** Sleeps until the current 30-second window is far enough from its end to submit a code safely. */
+export async function waitForSafeWindow(marginMs = 5_000) {
+  const remaining = TOTP_STEP_MS - (Date.now() % TOTP_STEP_MS);
+  if (remaining < marginMs) {
+    await new Promise((resolve) => setTimeout(resolve, remaining + 500));
   }
+}
+
+/** Sleeps until a window strictly later than the one in which the last enrollment code was submitted. */
+async function waitForWindowAfterEnrollment() {
+  if (!lastTotpSubmittedAt) return;
+  const nextWindowStart =
+    (Math.floor(lastTotpSubmittedAt / TOTP_STEP_MS) + 1) * TOTP_STEP_MS + 500;
+  const wait = nextWindowStart - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
 }
 
 async function describe(page) {
@@ -87,8 +102,8 @@ async function describe(page) {
 }
 
 /**
- * Completes Keycloak required actions (email verification, password, authenticator enrollment)
- * reached from an invitation link. Returns the enrolled TOTP secret, or null if none was shown.
+ * Completes Keycloak required actions reached from an invitation link: email verification, password and
+ * authenticator enrollment. Returns the enrolled TOTP secret, or null if no authenticator was enrolled.
  */
 export async function completeRequiredActions(
   page,
@@ -96,15 +111,23 @@ export async function completeRequiredActions(
 ) {
   let totpSecret = null;
   lastTotpSubmittedAt = 0;
+
   for (let step = 0; step < 25; step += 1) {
     debug(`ACTION step=${step} ${await describe(page)}`);
     if (page.url().startsWith(APP)) return totpSecret;
+
     const finished = await page
       .locator("#kc-page-title")
       .first()
       .innerText({ timeout: 1000 })
       .catch(() => "");
-    if (/has been (updated|verified)/i.test(finished)) return totpSecret;
+    // Stop only when the completion page offers no further action.
+    if (
+      /has been (updated|verified)/i.test(finished) &&
+      (await page.locator('a[href*="action-token"]').count()) === 0
+    ) {
+      return totpSecret;
+    }
 
     if (
       await page
@@ -124,25 +147,15 @@ export async function completeRequiredActions(
 
     if ((await page.locator("#totpSecret").count()) > 0) {
       totpSecret = (await page.locator("#totpSecret").inputValue()).trim();
-      if (lastTotpSubmittedAt) {
-        // A code already submitted in this window is rejected by Keycloak; wait for the next window.
-        const nextWindow =
-          (Math.floor(lastTotpSubmittedAt / 30000) + 1) * 30000 + 1000;
-        if (nextWindow > Date.now())
-          await new Promise((resolve) =>
-            setTimeout(resolve, nextWindow - Date.now()),
-          );
-      }
-      await waitForFreshWindow();
+      await waitForWindowAfterEnrollment();
+      await waitForSafeWindow();
       await page.locator("#totp").fill(totp(totpSecret));
       await page
         .locator("#userLabel")
         .fill("Local test device")
         .catch(() => {});
-      await page
-        .locator('input[type="submit"], button[type="submit"]')
-        .first()
-        .click();
+      lastTotpSubmittedAt = Date.now();
+      await page.locator("#saveTOTPBtn").click();
       await page.waitForLoadState("domcontentloaded");
       continue;
     }
@@ -167,7 +180,7 @@ export async function completeRequiredActions(
   return totpSecret;
 }
 
-/** Signs in through the BFF with a password and, when prompted, an authenticator code. */
+/** Signs in through the BFF with a password and, when prompted, a one-time authenticator code. */
 export async function signInWithTotp(
   page,
   email,
@@ -194,13 +207,8 @@ export async function signInWithTotp(
         .isVisible()
         .catch(() => false)
     ) {
-      const sinceEnrollment = Date.now() - lastTotpSubmittedAt;
-      if (lastTotpSubmittedAt && sinceEnrollment < 31_000) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 31_000 - sinceEnrollment),
-        );
-      }
-      await waitForFreshWindow();
+      await waitForWindowAfterEnrollment();
+      await waitForSafeWindow();
       await page.locator("#otp").fill(totp(secret));
       await page.locator("#kc-login").click();
     } else {
@@ -228,13 +236,6 @@ export async function apiSession(request) {
   return (await request.get(`${APP}/bff/session`)).json();
 }
 
-// Loads local development secrets for the identity test process (git-ignored file). Values are never logged.
-try {
-  process.loadEnvFile("infra/local/.env");
-} catch {
-  // The file is optional when the variables are already set in the environment.
-}
-
 async function adminToken() {
   const response = await fetch(
     `${KEYCLOAK}/realms/manada/protocol/openid-connect/token`,
@@ -254,8 +255,9 @@ async function adminToken() {
 }
 
 /**
- * Re-issues an invitation for a bootstrap identity: removes its authenticator, requires password
- * and authenticator setup again, and sends a new actions email. Test and recovery use only.
+ * Re-issues an invitation for a bootstrap identity: removes its authenticator, requires password and
+ * authenticator setup again, clears any brute-force lockout from earlier attempts, and sends a new
+ * actions email. Test and recovery use only. The lockout policy itself is unchanged.
  */
 export async function reissueInvitation(email) {
   const token = await adminToken();
@@ -281,6 +283,11 @@ export async function reissueInvitation(email) {
       headers,
     });
   }
+
+  await fetch(`${base}/attack-detection/brute-force/users/${user.id}`, {
+    method: "DELETE",
+    headers,
+  });
 
   const full = await (
     await fetch(`${base}/users/${user.id}`, { headers })
