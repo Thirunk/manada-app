@@ -91,6 +91,15 @@ Accounts are created through the application's own flows: SuperAdmin invitation,
 - The final local certification commit is the commit containing this document update. It is not pushed, merged or deployed.
 - Result: **PASS**. M3 is complete for the owner-approved password-authentication scope and ready for M4. OTP enrollment/authentication, production deployment verification and real browser zoom/screen-reader testing remain explicit deferrals.
 
+## 7. Targeted certification closure
+
+- Production artifact: `npm run build` completed successfully and the resulting `dist/` was served with `vite preview` on port 4173. Preview/test markers remained absent from the artifact.
+- Production-build authenticated browser smoke: **not independently completed**. The repository's production preview is a static server, while the existing BFF proxy and OIDC redirect configuration are provided by the development Vite server on port 5173. No production-equivalent same-origin BFF proxy was introduced for this closure, so authenticated production-artifact claims are not fabricated. Existing 9/9 real-stack password identity evidence remains development-server evidence.
+- Resident API process `dotnet run --no-build --project src/Manada.API --no-launch-profile` was identified as PID 33412 and stopped. No unrelated process was stopped.
+- Focused backend regression: `dotnet test backend/tests/Manada.IntegrationTests/Manada.IntegrationTests.csproj --no-build --filter FullyQualifiedName~AccountPolicyTests` passed **26/26**. `SettingsService` now has no allowlisted or writable `staff.mfa.enforced` setting; deployment-controlled `MfaEnforcement` remains the only enforcement path.
+- The attempted filtered integration run was stopped during test-host/container startup after hanging without assertions; unchanged full backend evidence remains the previously recorded 165/165.
+- The inherited M2 form-test synchronization issue and real 200%/400% zoom and screen-reader verification are mandatory M7 UAT follow-up items. OTP remains deferred under the owner-approved policy.
+
 ## 7. Known limitation (open)
 
 - OTP authentication is **not verified**. Authenticator enrollment is not offered to users. The current release does not depend on it, because MFA is optional.
