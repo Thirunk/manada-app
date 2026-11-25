@@ -37,6 +37,7 @@ for (const { name, viewport } of VIEWPORTS) {
         const inputs = page.locator(
           "input.field-input, select.field-input, textarea.field-input",
         );
+        await expect(inputs.first()).toBeVisible();
         const count = await inputs.count();
         expect(count).toBeGreaterThan(0);
 
