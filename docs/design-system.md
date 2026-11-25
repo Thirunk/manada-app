@@ -1,7 +1,6 @@
 # Design system (M2)
 
-Status: **proposed for owner review.** This is the initial design direction.
-It is not final until the owner approves the visual direction.
+Status: **APPROVED by the owner and frozen.** Further visual changes are limited to confirmed accessibility, security or functional defects. See `docs/manada-m2-certification.md`.
 
 Source of truth: `src/design/tokens.js`. Tailwind reads the same values in
 `tailwind.config.js`. The contrast test in `src/design/contrast.test.js`
